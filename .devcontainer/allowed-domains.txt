@@ -1,0 +1,26 @@
+# AI Bridge:ON — 프로젝트 전용 방화벽 허용 목록
+# 한 줄에 도메인 하나. '#' 뒤는 주석.
+# 와일드카드(*.supabase.co)는 쓸 수 없습니다. 정확한 주소를 적으세요.
+# 이 파일을 고친 뒤에는 반드시 컨테이너를 다시 빌드해야 적용됩니다.
+#   (VS Code 명령 팔레트 → "Dev Containers: Rebuild Container")
+
+# ── Supabase ─────────────────────────────────────────────
+# ① 개발용 프로젝트 API 주소: 대시보드 → Project Settings → API → Project URL
+#    예) https://abcdefghijklmnop.supabase.co  →  abcdefghijklmnop.supabase.co
+YOUR-PROJECT-REF.supabase.co
+# ② Supabase CLI(로그인, link, db push)용 관리 API
+api.supabase.com
+# ③ DB 직접 연결(db push)용 Pooler 주소: 대시보드 → Connect → Session pooler 의 host
+#    예) aws-0-ap-northeast-2.pooler.supabase.com
+YOUR-POOLER-HOST.pooler.supabase.com
+
+# ── 메일 (보호자 동의·교사 승인 메일 발송 테스트) ──────────
+api.resend.com
+
+# ── 폰트 (next/font/google 사용 시 빌드 중 다운로드) ──────
+fonts.googleapis.com
+fonts.gstatic.com
+
+# ── 필요할 때만 주석(#)을 지우고 사용 ───────────────────
+# api.vercel.com          # 컨테이너 안에서 Vercel CLI로 배포할 때
+# cdn.jsdelivr.net        # CDN에서 라이브러리를 받을 때 (가능하면 npm 사용)
