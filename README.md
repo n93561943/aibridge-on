@@ -89,7 +89,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 1. GitHub 저장소에 push
 2. [vercel.com](https://vercel.com) → **Add New… → Project** → 저장소 Import (Framework: Next.js, 설정 기본값)
 3. **Settings → Environment Variables**에 `.env.example`의 변수 입력
-   - `NEXT_PUBLIC_SITE_URL`: 도메인 연결 전에는 Vercel 기본 주소(`https://<프로젝트>.vercel.app`)
+   - `NEXT_PUBLIC_SITE_URL`: 도메인 연결 전에는 Vercel 기본 주소(`https://<프로젝트>.vercel.app`). **Production 환경에서 비어 있으면 빌드가 실패한다.** Preview 환경은 비워 두면 배포별 주소(`NEXT_PUBLIC_VERCEL_URL`)를 쓴다(Vercel 설정의 "Automatically expose System Environment Variables"가 켜져 있어야 함)
    - Supabase 프로젝트가 없으면 Supabase 값은 비워 둬도 배포된다
 4. Deploy → 이후 `main`에 push할 때마다 자동 배포, PR마다 미리보기 배포
 5. 배포 주소의 `/api/health` 확인

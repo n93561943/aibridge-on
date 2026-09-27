@@ -29,7 +29,7 @@ export default function HomePage() {
               key={stage.key}
               className={cn("flex flex-col gap-1 rounded-xl p-4", stageColor[stage.key])}
             >
-              <span className="text-xs font-medium opacity-90">
+              <span className="text-xs font-medium">
                 {index + 1}단계 · {stage.english}
               </span>
               <span className="text-lg font-bold">{stage.label}</span>

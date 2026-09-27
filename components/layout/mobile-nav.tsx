@@ -16,7 +16,7 @@ export function MobileNav({ items }: { items: NavItem[] }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="메뉴 열기">
+        <Button variant="ghost" size="icon" className="size-10 md:hidden" aria-label="메뉴 열기">
           <MenuIcon />
         </Button>
       </SheetTrigger>

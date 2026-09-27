@@ -29,3 +29,13 @@ test("헬스체크가 응답한다", async ({ request }) => {
   expect(body.app).toBe("ok");
   expect(["ok", "not_configured"]).toContain(body.supabase);
 });
+
+test("첫 Tab으로 본문 바로가기 링크에 도달하고 본문으로 이동한다", async ({ page, isMobile }) => {
+  test.skip(isMobile, "키보드 탐색은 데스크톱에서만 검사");
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", { name: "본문 바로가기" });
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main#main")).toBeFocused();
+});
