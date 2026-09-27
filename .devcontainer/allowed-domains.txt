@@ -21,6 +21,10 @@ api.resend.com
 fonts.googleapis.com
 fonts.gstatic.com
 
+# ── Vercel 배포 사이트 (Playwright MCP·E2E로 배포 결과 확인) ──
+# 실제 운영 주소로 바꾸세요(Vercel → Settings → Domains). 도메인 연결 후에는 aibridgeon.com도 추가.
+aibridge-on.vercel.app
+
 # ── 필요할 때만 주석(#)을 지우고 사용 ───────────────────
 # api.vercel.com          # 컨테이너 안에서 Vercel CLI로 배포할 때
 # cdn.jsdelivr.net        # CDN에서 라이브러리를 받을 때 (가능하면 npm 사용)

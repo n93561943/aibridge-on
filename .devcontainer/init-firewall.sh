@@ -89,6 +89,29 @@ for domain in \
     done < <(echo "$ips")
 done
 
+# 프로젝트 허용 목록(allowed-domains.txt). 주소를 못 찾으면 방화벽 전체를 멈추지 않고 경고 후 건너뛴다.
+PROJECT_DOMAINS_FILE="/usr/local/etc/allowed-domains.txt"
+if [ -f "$PROJECT_DOMAINS_FILE" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        domain=$(echo "${line%%#*}" | tr -d '[:space:]')
+        [ -z "$domain" ] && continue
+        echo "Resolving $domain (project)..."
+        ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
+        if [ -z "$ips" ]; then
+            echo "WARNING: Failed to resolve $domain — skipped (allowed-domains.txt 값을 확인하세요)"
+            continue
+        fi
+        while read -r ip; do
+            if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+                echo "WARNING: Invalid IP from DNS for $domain: $ip — skipped"
+                continue
+            fi
+            echo "Adding $ip for $domain"
+            ipset add -exist allowed-domains "$ip"
+        done < <(echo "$ips")
+    done < "$PROJECT_DOMAINS_FILE"
+fi
+
 # Get host IP from default route
 HOST_IP=$(ip route | grep default | cut -d" " -f3)
 if [ -z "$HOST_IP" ]; then

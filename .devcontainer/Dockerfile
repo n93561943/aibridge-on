@@ -83,9 +83,18 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 
 # Copy and set up firewall script
+# 허용 목록은 이미지에 복사한다(컨테이너 안에서 파일을 고쳐 방화벽을 넓히지 못하게). 수정 후 재빌드 필요.
 COPY init-firewall.sh /usr/local/bin/
+COPY allowed-domains.txt /usr/local/etc/allowed-domains.txt
 USER root
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
+  chmod 0644 /usr/local/etc/allowed-domains.txt && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
+
+# Playwright(E2E·Playwright MCP)가 Chromium을 띄우는 데 필요한 시스템 라이브러리.
+# 버전은 package.json의 @playwright/test와 맞춘다. 브라우저 본체는 postCreateCommand에서 받는다.
+ARG PLAYWRIGHT_VERSION=1.63.0
+RUN npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium && \
+  apt-get clean && rm -rf /var/lib/apt/lists/* /root/.npm
 USER node
