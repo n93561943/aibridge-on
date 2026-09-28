@@ -60,7 +60,8 @@ while read -r cidr; do
         exit 1
     fi
     echo "Adding GitHub range $cidr"
-    ipset add allowed-domains "$cidr"
+    # -exist: aggregate 결과나 대역이 겹쳐 중복 추가될 수 있어 중복 시 에러 대신 무시
+    ipset add -exist allowed-domains "$cidr"
 done < <(echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q)
 
 # Resolve and add other allowed domains
@@ -85,7 +86,8 @@ for domain in \
             exit 1
         fi
         echo "Adding $ip for $domain"
-        ipset add allowed-domains "$ip"
+        # -exist: 라운드로빈 DNS 등으로 같은 IP가 중복 응답될 수 있어 중복 시 에러 대신 무시
+        ipset add -exist allowed-domains "$ip"
     done < <(echo "$ips")
 done
 
