@@ -3,7 +3,16 @@
     "playwright": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@0.0.80", "--browser", "chromium", "--headless", "--isolated"],
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.80",
+        "--browser",
+        "chromium",
+        "--headless",
+        "--isolated",
+        "--output-dir",
+        ".playwright-mcp"
+      ],
       "env": {}
     }
   }

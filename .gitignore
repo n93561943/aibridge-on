@@ -46,6 +46,8 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Playwright MCP 출력(스크린샷·스냅샷·콘솔 로그)
+/.playwright-mcp/
 
 # supabase
 supabase/.branches
