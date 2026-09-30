@@ -49,6 +49,9 @@ next-env.d.ts
 # Playwright MCP 출력(스크린샷·스냅샷·콘솔 로그)
 /.playwright-mcp/
 
+# devcontainer 방화벽 허용 목록(실제 프로젝트 주소). 템플릿: .devcontainer/allowed-domains.example.txt
+.devcontainer/allowed-domains.txt
+
 # supabase
 supabase/.branches
 supabase/.temp

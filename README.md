@@ -68,7 +68,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 ## Supabase 연결
 
 1. [supabase.com](https://supabase.com)에서 프로젝트 생성 (리전: Northeast Asia (Seoul) 권장)
-2. **개발 컨테이너 방화벽 등록** — `.devcontainer/allowed-domains.txt`에서
+2. **개발 컨테이너 방화벽 등록** — `cp .devcontainer/allowed-domains.example.txt .devcontainer/allowed-domains.txt` 후 복사본에서 (복사본은 git 무시됨)
    - `YOUR-PROJECT-REF.supabase.co` → 대시보드 **Project Settings → API → Project URL**의 호스트
    - `YOUR-POOLER-HOST.pooler.supabase.com` → 대시보드 **Connect → Session pooler**의 host
    - 수정 후 **컨테이너 재빌드**(명령 팔레트 → "Dev Containers: Rebuild Container")

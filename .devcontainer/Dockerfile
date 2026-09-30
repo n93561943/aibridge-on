@@ -84,10 +84,14 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # Copy and set up firewall script
 # 허용 목록은 이미지에 복사한다(컨테이너 안에서 파일을 고쳐 방화벽을 넓히지 못하게). 수정 후 재빌드 필요.
+# allowed-domains.txt(git 무시)가 없으면 템플릿(allowed-domains.example.txt)을 쓴다. 글롭이라 파일이 없어도 COPY가 실패하지 않는다.
 COPY init-firewall.sh /usr/local/bin/
-COPY allowed-domains.txt /usr/local/etc/allowed-domains.txt
+COPY allowed-domains*.txt /tmp/firewall-domains/
 USER root
 RUN chmod +x /usr/local/bin/init-firewall.sh && \
+  if [ -f /tmp/firewall-domains/allowed-domains.txt ]; then src=allowed-domains.txt; else src=allowed-domains.example.txt; fi && \
+  cp "/tmp/firewall-domains/$src" /usr/local/etc/allowed-domains.txt && \
+  rm -rf /tmp/firewall-domains && \
   chmod 0644 /usr/local/etc/allowed-domains.txt && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
