@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { GuardianPendingBanner } from "@/components/layout/guardian-pending-banner";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { HeaderViewer } from "@/components/layout/viewer";
@@ -35,6 +36,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         본문 바로가기
       </a>
       <SiteHeader viewer={viewer} />
+      {viewer?.pendingGuardian && <GuardianPendingBanner />}
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         {children}
       </main>
