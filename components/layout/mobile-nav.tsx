@@ -4,13 +4,15 @@ import { MenuIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { signOut } from "@/app/(site)/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { siteConfig } from "@/lib/site";
 
 import type { NavItem } from "./nav-items";
+import type { HeaderViewer } from "./viewer";
 
-export function MobileNav({ items }: { items: NavItem[] }) {
+export function MobileNav({ items, viewer }: { items: NavItem[]; viewer: HeaderViewer | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -33,6 +35,35 @@ export function MobileNav({ items }: { items: NavItem[] }) {
             ))
           )}
         </nav>
+        <div className="mt-auto flex flex-col gap-1 border-t px-4 py-4">
+          {viewer ? (
+            <>
+              <Link
+                href={viewer.nickname ? "/me" : "/signup"}
+                onClick={() => setOpen(false)}
+                className="block rounded-md px-2 py-2 font-medium hover:bg-accent"
+              >
+                {viewer.nickname ? `내 정보 (${viewer.nickname})` : "가입 마치기"}
+              </Link>
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="block w-full rounded-md px-2 py-2 text-left font-medium hover:bg-accent"
+                >
+                  로그아웃
+                </button>
+              </form>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="block rounded-md px-2 py-2 font-medium hover:bg-accent"
+            >
+              로그인
+            </Link>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );

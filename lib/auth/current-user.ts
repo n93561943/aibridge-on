@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { toUserRole } from "@/lib/auth/roles";
 import { getSupabasePublicConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
@@ -52,6 +53,6 @@ export async function requireMember(
 /** 관리자 필수. 정지된 관리자는 거부한다. */
 export async function requireAdmin(): Promise<CurrentUser & { profile: Profile }> {
   const user = await requireMember();
-  if (user.profile.role !== "admin" || user.profile.status !== "active") redirect("/");
+  if (toUserRole(user.profile.role) !== "admin" || user.profile.status !== "active") redirect("/");
   return user;
 }

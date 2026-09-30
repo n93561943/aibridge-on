@@ -5,8 +5,12 @@ import { withSessionMaxAge } from "@/lib/auth/session";
 import { getSupabasePublicConfig } from "@/lib/env";
 import type { Database } from "@/types/database";
 
+export const PATHNAME_HEADER = "x-pathname";
+
 /** 요청마다 Supabase 세션 쿠키를 갱신한다. 환경변수가 없으면 아무것도 하지 않는다. */
 export async function updateSession(request: NextRequest) {
+  // 서버 컴포넌트(레이아웃)에서 현재 경로를 알 수 있게 전달한다(가입 미완료 사용자 이동 판단용).
+  request.headers.set(PATHNAME_HEADER, request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const config = getSupabasePublicConfig();
