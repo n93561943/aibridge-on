@@ -7,3 +7,5 @@ test-results
 docs
 CLAUDE.md
 .devcontainer
+# supabase gen types로 생성되는 파일
+types/database.ts
