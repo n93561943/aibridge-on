@@ -55,3 +55,6 @@ next-env.d.ts
 # supabase
 supabase/.branches
 supabase/.temp
+
+# Claude Code 개인 설정(권한 등)
+.claude/settings.local.json

@@ -50,6 +50,13 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 > 컨테이너에서 E2E를 돌리려면 Dockerfile에 `RUN npx -y playwright@<버전> install-deps chromium`(root 단계)을 추가하고 재빌드하거나, 호스트에서 실행한다.
 > 이미 떠 있는 서버를 대상으로 하려면 `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e`.
 
+**인증·RLS E2E(`e2e/auth.spec.ts`, `e2e/rls.spec.ts`)**
+
+- `.env.local`의 Supabase 값(서버 전용 키 포함)으로 **개발용 원격 프로젝트**에 접속한다. 운영 프로젝트 키로 돌리지 않는다.
+- 메일을 보내지 않는다. 관리자 API(`generateLink`)로 로그인 코드를 받아 세션 쿠키를 넣고, 보호자 동의 토큰도 테스트가 직접 만든다.
+- `e2e+<랜덤>@example.com` 계정을 만들고 테스트가 끝나면 지운다. 중간에 끊기면 대시보드 Authentication → Users에서 `e2e+`로 검색해 지운다.
+- `npm run dev`를 **두 개 동시에 띄우지 않는다.** `.next` 캐시를 같이 써서 Server Action을 찾지 못하는 오류(`UnrecognizedActionError`)가 날 수 있다. 이런 오류가 나면 개발 서버를 끄고 `.next`를 지운 뒤 다시 띄운다.
+
 ## 환경변수
 
 `.env.example` 참고. `.env*` 파일은 커밋하지 않는다(`.env.example`만 예외).
@@ -75,6 +82,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 3. `.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` 입력
 4. `npm run dev` 후 `http://localhost:3000/api/health`에서 `"supabase":"ok"` 확인
 5. CLI 연결(마이그레이션용, P1부터)
+
    ```bash
    npx supabase login
    npx supabase link --project-ref <project-ref>
@@ -82,7 +90,49 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
    npx supabase db push
    ```
 
-> 이메일 OTP 코드 로그인용 메일 템플릿·Resend SMTP 설정은 P1에서 이 문서에 추가한다.
+6. DB 변경 적용: `npx supabase db push` 후 `npx supabase gen types typescript --linked > types/database.ts`
+
+## 인증(이메일 코드 로그인) 설정
+
+로컬 `supabase/config.toml`에는 반영되어 있지만, **원격 프로젝트는 대시보드에서 직접 맞춰야 한다.**
+
+### 1. Authentication → Sign In / Providers → Email
+
+| 항목                  | 값                               |
+| --------------------- | -------------------------------- |
+| Enable Email provider | 켬                               |
+| Confirm email         | 끔(코드 입력 자체가 이메일 확인) |
+| Email OTP Expiration  | `600` (10분)                     |
+| Email OTP Length      | `6`                              |
+
+### 2. Authentication → Emails → Templates
+
+**Magic Link**와 **Confirm signup** 두 템플릿의 제목을 `[AI Bridge:ON] 로그인 코드`로, 본문을 [`supabase/templates/otp-code.html`](supabase/templates/otp-code.html) 내용으로 바꾼다. 기본 템플릿은 링크를 보내므로, 바꾸지 않으면 코드가 아니라 링크가 간다.
+
+### 3. Authentication → Rate Limits
+
+- 이메일 발송 간격: 60초(화면의 재발송 카운트다운과 맞춤)
+- 이메일 발송 한도: 기본 SMTP는 시간당 몇 통으로 고정. Resend 연결 후 늘린다.
+
+### 4. Authentication → URL Configuration
+
+- Site URL: 개발 중 `http://localhost:3000`, 운영 전환 시 `NEXT_PUBLIC_SITE_URL`과 같은 주소([`docs/SPEC.md` 2.2](docs/SPEC.md))
+
+### 5. 메일 발송(Resend)
+
+- **Supabase 기본 SMTP는 프로젝트 팀원 이메일로만, 시간당 소량만 보낸다.** 팀원이 아닌 이메일로 로그인을 시험하려면 Resend가 필요하다.
+- 로그인 코드 메일: Authentication → Emails → SMTP Settings에서 Custom SMTP를 켜고 Host `smtp.resend.com`, Port `465`, User `resend`, Password = Resend API 키, 발신 주소 = `MAIL_FROM`의 주소.
+- 보호자 동의 메일: 앱이 Resend API로 직접 보낸다(`RESEND_API_KEY`, `MAIL_FROM`).
+  - 키가 없으면 **개발 환경에서만** 메일 내용(동의 링크 포함)을 `npm run dev` 터미널에 출력한다.
+  - 운영 빌드에서 키가 없으면 발송 실패로 처리한다.
+- Resend에서 도메인(aibridgeon.com) 인증 전에는 Resend 계정 본인 이메일로만 보낼 수 있다.
+
+### 동작 규칙과 한계
+
+- 코드 5회 오류 시 무효: 앱의 로그인 화면을 거칠 때 적용된다(`otp_attempts`). Supabase Auth API를 직접 호출하는 우회는 Supabase 자체의 검증 횟수 제한에 의존한다.
+- 로그인 유지 30일: 마지막 코드 로그인부터 30일이 지나면 middleware가 세션을 서버에서 끝낸다(refresh token도 무효). Supabase 무료 등급에는 세션 최대 수명(Time-box) 설정이 없어 앱에서 처리한다. 세션 쿠키 수명도 30일이다.
+- `ADMIN_EMAILS`의 이메일은 첫 로그인 후 가입 정보 입력(`/signup`)을 마치면 관리자로 만들어진다(SPEC F-01). 이미 가입한 계정을 관리자로 바꾸는 것은 관리자 화면(P6)에서 한다.
+- 만 14세 미만 가입 후 7일 안에 보호자 동의가 없는 계정, 로그인만 하고 가입을 끝내지 않은 채 7일이 지난 계정은 `pg_cron` 작업(`purge-expired-accounts`, 매시간)이 삭제한다.
 
 ## 배포 (GitHub → Vercel)
 

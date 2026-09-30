@@ -6,13 +6,20 @@ export const OTP_EXPIRY_SECONDS = 10 * 60;
 
 export const otpCodeRegex = new RegExp(`^\\d{${OTP_LENGTH}}$`);
 
-export type OtpAttemptRecord = { fail_count: number; issued_at: string };
-
-/** 현재 코드로 더 검증할 수 있는지. 오류 5회면 새 코드를 받아야 한다. */
-export function isOtpLocked(record: OtpAttemptRecord | null): boolean {
-  return (record?.fail_count ?? 0) >= OTP_MAX_FAILURES;
+/**
+ * 검증 전에 시도 1회를 먼저 차감한 누적 횟수(attempts)로 판단한다.
+ * 5회까지는 검증하고, 6번째 요청부터는 새 코드를 받아야 한다.
+ */
+export function isOverOtpLimit(attempts: number): boolean {
+  return attempts > OTP_MAX_FAILURES;
 }
 
-export function remainingOtpAttempts(record: OtpAttemptRecord | null): number {
-  return Math.max(0, OTP_MAX_FAILURES - (record?.fail_count ?? 0));
+/** 이번 시도가 실패했을 때 남는 횟수 */
+export function remainingOtpAttempts(attempts: number): number {
+  return Math.max(0, OTP_MAX_FAILURES - attempts);
+}
+
+/** 인증 서버 쪽 문제(요청 과다·서버 오류)면 코드 오류로 세지 않는다. */
+export function isAuthServiceError(status: number | undefined): boolean {
+  return status === 429 || (status !== undefined && status >= 500);
 }

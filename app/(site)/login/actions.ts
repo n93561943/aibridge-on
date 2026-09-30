@@ -5,11 +5,17 @@ import { redirect } from "next/navigation";
 import { emailSchema } from "@/lib/auth/email";
 import {
   clearOtpAttempts,
-  getOtpAttempts,
-  recordOtpFailure,
+  consumeOtpAttempt,
+  refundOtpAttempt,
   resetOtpAttempts,
 } from "@/lib/auth/otp-guard";
-import { isOtpLocked, OTP_MAX_FAILURES, otpCodeRegex } from "@/lib/auth/otp-policy";
+import {
+  isAuthServiceError,
+  isOverOtpLimit,
+  OTP_MAX_FAILURES,
+  otpCodeRegex,
+  remainingOtpAttempts,
+} from "@/lib/auth/otp-policy";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -73,24 +79,25 @@ async function verifyCode(prev: LoginState, formData: FormData): Promise<LoginSt
 
   if (!otpCodeRegex.test(code)) return { ...base, error: "6자리 숫자 코드를 입력해 주세요." };
 
-  if (isOtpLocked(await getOtpAttempts(email))) {
-    return {
-      ...base,
-      error: `코드를 ${OTP_MAX_FAILURES}회 잘못 입력해 이 코드는 더 쓸 수 없습니다. 새 코드를 받아 주세요.`,
-    };
-  }
+  const lockedMessage = `코드를 ${OTP_MAX_FAILURES}회 잘못 입력해 이 코드는 더 쓸 수 없습니다. 새 코드를 받아 주세요.`;
+  // 검증 전에 시도 1회를 먼저 차감한다(동시 요청으로 5회 제한을 우회하지 못하게).
+  const attempts = await consumeOtpAttempt(email);
+  if (isOverOtpLimit(attempts)) return { ...base, error: lockedMessage };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
   if (error || !data.user) {
-    const failures = await recordOtpFailure(email);
-    const remaining = OTP_MAX_FAILURES - failures;
+    if (isAuthServiceError(error?.status)) {
+      await refundOtpAttempt(email);
+      return { ...base, error: "로그인 서버가 바쁩니다. 잠시 후 다시 시도해 주세요." };
+    }
+    const remaining = remainingOtpAttempts(attempts);
     return {
       ...base,
       error:
         remaining > 0
           ? `코드가 올바르지 않거나 만료되었습니다. (남은 시도 ${remaining}회)`
-          : `코드를 ${OTP_MAX_FAILURES}회 잘못 입력해 이 코드는 더 쓸 수 없습니다. 새 코드를 받아 주세요.`,
+          : lockedMessage,
     };
   }
 

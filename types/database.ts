@@ -175,9 +175,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_otp_attempt: {
+        Args: { p_delta?: number; p_email_hash: string }
+        Returns: number
+      }
       current_user_role: { Args: never; Returns: string }
+      give_guardian_consent: { Args: { p_token_hash: string }; Returns: string }
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      issue_guardian_token: {
+        Args: {
+          p_cooldown_seconds: number
+          p_daily_limit: number
+          p_expires_at: string
+          p_profile_id: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
       purge_expired_accounts: { Args: never; Returns: undefined }
     }
     Enums: {

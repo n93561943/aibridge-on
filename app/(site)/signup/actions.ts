@@ -47,30 +47,34 @@ export async function completeSignup(_prev: SignupState, formData: FormData): Pr
 
   // 역할·상태·14세 관련 컬럼은 사용자가 직접 쓸 수 없으므로(RLS) service role로 만든다.
   const admin = createAdminClient();
-  const { error } = await admin.from("profiles").insert({
-    id: user.id,
-    email,
-    nickname: input.nickname,
-    role: isAdmin ? "admin" : "student",
-    is_under_14: input.isUnder14,
-    guardian_email: input.guardianEmail,
-    status: input.isUnder14 ? "pending_guardian" : "active",
-    privacy_agreed_at: now,
-    last_login_at: now,
-    ...(input.teacher
-      ? {
-          teacher_school: input.teacher.teacherSchool,
-          teacher_position: input.teacher.teacherPosition,
-          teacher_subject: input.teacher.teacherSubject,
-          teacher_status: "pending",
-          teacher_requested_at: now,
-        }
-      : {}),
-  });
+  const { data: created, error } = await admin
+    .from("profiles")
+    .insert({
+      id: user.id,
+      email,
+      nickname: input.nickname,
+      role: isAdmin ? "admin" : "student",
+      is_under_14: input.isUnder14,
+      guardian_email: input.guardianEmail,
+      status: input.isUnder14 ? "pending_guardian" : "active",
+      privacy_agreed_at: now,
+      last_login_at: now,
+      ...(input.teacher
+        ? {
+            teacher_school: input.teacher.teacherSchool,
+            teacher_position: input.teacher.teacherPosition,
+            teacher_subject: input.teacher.teacherSubject,
+            teacher_status: "pending",
+            teacher_requested_at: now,
+          }
+        : {}),
+    })
+    .select("created_at")
+    .single();
 
-  if (error) {
+  if (error || !created) {
     // 23505: 이미 가입됨(중복 제출)
-    if (error.code === "23505") redirect("/me");
+    if (error?.code === "23505") redirect("/me");
     return {
       formError: "가입 정보를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
       values: restorableValues(formData),
@@ -83,6 +87,7 @@ export async function completeSignup(_prev: SignupState, formData: FormData): Pr
       id: user.id,
       nickname: input.nickname,
       guardian_email: input.guardianEmail,
+      created_at: created.created_at,
     });
   }
 

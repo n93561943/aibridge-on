@@ -100,6 +100,7 @@ export async function resendGuardianMail(): Promise<FormState> {
     id: profile.id,
     nickname: profile.nickname,
     guardian_email: profile.guardian_email,
+    created_at: profile.created_at,
   });
   if (!result.ok) return { message: guardianSendErrorMessage(result) };
   return { ok: true, message: "보호자에게 동의 메일을 다시 보냈습니다." };

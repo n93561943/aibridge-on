@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { withSessionMaxAge } from "@/lib/auth/session";
+import { isSessionExpired, withSessionMaxAge } from "@/lib/auth/session";
 import { getSupabasePublicConfig } from "@/lib/env";
 import type { Database } from "@/types/database";
 
@@ -32,7 +32,14 @@ export async function updateSession(request: NextRequest) {
   });
 
   // getUser()가 만료된 토큰을 갱신한다. 이 호출과 createServerClient 사이에 다른 코드를 넣지 않는다.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // 로그인 유지 30일(F-01): 마지막 코드 로그인부터 30일이 지나면 세션(refresh token 포함)을 서버에서 끝낸다.
+  if (user && isSessionExpired(user.last_sign_in_at)) {
+    await supabase.auth.signOut({ scope: "local" });
+  }
 
   return response;
 }

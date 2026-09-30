@@ -1,32 +1,51 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  canSendGuardianMail,
   createGuardianToken,
   evaluateGuardianToken,
-  GUARDIAN_DAILY_SEND_LIMIT,
+  GUARDIAN_RESEND_COOLDOWN_SECONDS,
   GUARDIAN_TOKEN_TTL_DAYS,
+  guardianTokenExpiry,
   hashGuardianToken,
+  parseIssueResult,
 } from "@/lib/guardian/token";
 
 const now = new Date("2026-10-01T00:00:00Z");
 const DAY = 24 * 60 * 60 * 1000;
 
 describe("createGuardianToken", () => {
+  const expiresAt = new Date(now.getTime() + DAY);
+
   it("원문 토큰과 다른 해시를 만들고 해시는 재현 가능하다", () => {
-    const { token, tokenHash } = createGuardianToken(now);
+    const { token, tokenHash } = createGuardianToken(expiresAt);
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(tokenHash).not.toContain(token);
     expect(hashGuardianToken(token)).toBe(tokenHash);
   });
 
   it("매번 다른 토큰을 만든다", () => {
-    expect(createGuardianToken(now).token).not.toBe(createGuardianToken(now).token);
+    expect(createGuardianToken(expiresAt).token).not.toBe(createGuardianToken(expiresAt).token);
+  });
+});
+
+describe("guardianTokenExpiry", () => {
+  it("가입 직후 발송이면 7일 뒤 만료", () => {
+    expect(guardianTokenExpiry(now, now).getTime() - now.getTime()).toBe(
+      GUARDIAN_TOKEN_TTL_DAYS * DAY,
+    );
   });
 
-  it("유효기간은 7일", () => {
-    const { expiresAt } = createGuardianToken(now);
-    expect(expiresAt.getTime() - now.getTime()).toBe(GUARDIAN_TOKEN_TTL_DAYS * DAY);
+  it("재발송해도 계정 삭제 시점(가입 + 7일)을 넘지 않는다", () => {
+    const createdAt = new Date(now.getTime() - 6 * DAY);
+    expect(guardianTokenExpiry(createdAt, now)).toEqual(
+      new Date(createdAt.getTime() + GUARDIAN_TOKEN_TTL_DAYS * DAY),
+    );
+  });
+
+  it("삭제 기한이 이미 지났으면 과거 시각(= 발송 불가)", () => {
+    const createdAt = new Date(now.getTime() - 8 * DAY);
+    expect(guardianTokenExpiry(createdAt, now).getTime()).toBeLessThan(now.getTime());
   });
 });
 
@@ -58,29 +77,26 @@ describe("evaluateGuardianToken", () => {
   });
 });
 
-describe("canSendGuardianMail", () => {
-  it("발송 이력이 없으면 가능", () => {
-    expect(canSendGuardianMail([], now)).toEqual({ ok: true });
+describe("parseIssueResult", () => {
+  it("ok", () => {
+    expect(parseIssueResult("ok")).toEqual({ ok: true });
   });
 
-  it("마지막 발송 후 60초 안에는 남은 시간을 알려 준다", () => {
-    const result = canSendGuardianMail([new Date(now.getTime() - 20_000)], now);
-    expect(result).toEqual({ ok: false, reason: "cooldown", retryAfterSeconds: 40 });
+  it("cooldown:<초>를 남은 시간으로 해석한다", () => {
+    expect(parseIssueResult("cooldown:42")).toEqual({
+      ok: false,
+      reason: "cooldown",
+      retryAfterSeconds: 42,
+    });
+    expect(parseIssueResult("cooldown:abc")).toMatchObject({
+      retryAfterSeconds: GUARDIAN_RESEND_COOLDOWN_SECONDS,
+    });
   });
 
-  it("24시간 안에 5회 보냈으면 하루 한도 초과", () => {
-    const sent = Array.from(
-      { length: GUARDIAN_DAILY_SEND_LIMIT },
-      (_, i) => new Date(now.getTime() - (i + 1) * 60 * 60 * 1000),
-    );
-    expect(canSendGuardianMail(sent, now)).toEqual({ ok: false, reason: "daily_limit" });
-  });
-
-  it("24시간이 지난 발송은 한도에 넣지 않는다", () => {
-    const sent = Array.from(
-      { length: GUARDIAN_DAILY_SEND_LIMIT },
-      (_, i) => new Date(now.getTime() - DAY - (i + 1) * 1000),
-    );
-    expect(canSendGuardianMail(sent, now)).toEqual({ ok: true });
+  it("한도·기한·상태 오류를 구분하고 알 수 없는 값은 db_failed", () => {
+    expect(parseIssueResult("daily_limit")).toEqual({ ok: false, reason: "daily_limit" });
+    expect(parseIssueResult("expired")).toEqual({ ok: false, reason: "expired" });
+    expect(parseIssueResult("not_pending")).toEqual({ ok: false, reason: "not_pending" });
+    expect(parseIssueResult(null)).toEqual({ ok: false, reason: "db_failed" });
   });
 });

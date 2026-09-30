@@ -11,13 +11,9 @@ export function hashGuardianToken(token: string): string {
 }
 
 /** 원문 토큰은 메일 링크에만 쓰고 DB에는 해시만 저장한다. */
-export function createGuardianToken(now = new Date()) {
+export function createGuardianToken(expiresAt: Date) {
   const token = randomToken(32);
-  return {
-    token,
-    tokenHash: hashGuardianToken(token),
-    expiresAt: new Date(now.getTime() + GUARDIAN_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000),
-  };
+  return { token, tokenHash: hashGuardianToken(token), expiresAt };
 }
 
 export type GuardianConsentRecord = {
@@ -39,24 +35,37 @@ export function evaluateGuardianToken(
   return "valid";
 }
 
-export type GuardianResendDecision =
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 동의 링크 만료 시각 = min(발송 시각 + 7일, 가입 시각 + 7일).
+ * 계정은 가입 7일 뒤 자동 삭제되므로(purge_expired_accounts), 재발송 링크도 그보다 오래 유효하면 안 된다.
+ */
+export function guardianTokenExpiry(profileCreatedAt: Date, now = new Date()): Date {
+  const ttl = GUARDIAN_TOKEN_TTL_DAYS * DAY_MS;
+  return new Date(Math.min(now.getTime() + ttl, profileCreatedAt.getTime() + ttl));
+}
+
+export type GuardianIssueResult =
   | { ok: true }
   | { ok: false; reason: "cooldown"; retryAfterSeconds: number }
-  | { ok: false; reason: "daily_limit" };
+  | { ok: false; reason: "daily_limit" | "expired" | "not_pending" | "db_failed" | "mail_failed" };
 
-/** 최근 발송 시각 목록으로 재발송 가능 여부를 판단한다. */
-export function canSendGuardianMail(sentAt: Date[], now = new Date()): GuardianResendDecision {
-  const dayAgo = now.getTime() - 24 * 60 * 60 * 1000;
-  const recent = sentAt.filter((d) => d.getTime() > dayAgo);
-  if (recent.length >= GUARDIAN_DAILY_SEND_LIMIT) return { ok: false, reason: "daily_limit" };
-  const last = Math.max(0, ...recent.map((d) => d.getTime()));
-  const elapsed = Math.floor((now.getTime() - last) / 1000);
-  if (last > 0 && elapsed < GUARDIAN_RESEND_COOLDOWN_SECONDS) {
+/** DB 함수 issue_guardian_token의 반환 문자열을 해석한다. */
+export function parseIssueResult(value: unknown): GuardianIssueResult {
+  if (value === "ok") return { ok: true };
+  if (typeof value === "string" && value.startsWith("cooldown:")) {
+    const seconds = Number(value.slice("cooldown:".length));
     return {
       ok: false,
       reason: "cooldown",
-      retryAfterSeconds: GUARDIAN_RESEND_COOLDOWN_SECONDS - elapsed,
+      retryAfterSeconds: Number.isFinite(seconds)
+        ? Math.max(1, seconds)
+        : GUARDIAN_RESEND_COOLDOWN_SECONDS,
     };
   }
-  return { ok: true };
+  if (value === "daily_limit" || value === "expired" || value === "not_pending") {
+    return { ok: false, reason: value };
+  }
+  return { ok: false, reason: "db_failed" };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,16 @@ export function SignupForm({ email, next }: { email: string; next: string }) {
   const [applyTeacher, setApplyTeacher] = useState(false);
   const errors = state.errors ?? {};
   const values = state.values ?? {};
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // 제출 실패 시 첫 오류 항목으로 포커스를 옮긴다(스크린리더·키보드 사용자).
+  useEffect(() => {
+    if (!state.errors) return;
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [state]);
 
   return (
-    <form action={action} className="grid gap-6" noValidate>
+    <form ref={formRef} action={action} className="grid gap-6" noValidate>
       <input type="hidden" name="next" value={next} />
 
       <div className="grid gap-2">
@@ -48,12 +55,13 @@ export function SignupForm({ email, next }: { email: string; next: string }) {
         />
       </Field>
 
-      <fieldset className="grid gap-2">
+      <fieldset className="grid gap-2" aria-describedby="ageGroup-error">
         <legend className="mb-2 text-sm font-medium">만 14세 이상인가요?</legend>
         <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
           <RadioOption
             name="ageGroup"
             value="over14"
+            aria-invalid={!!errors.ageGroup || undefined}
             checked={ageGroup === "over14"}
             onChange={() => setAgeGroup("over14")}
           >
@@ -62,6 +70,7 @@ export function SignupForm({ email, next }: { email: string; next: string }) {
           <RadioOption
             name="ageGroup"
             value="under14"
+            aria-invalid={!!errors.ageGroup || undefined}
             checked={ageGroup === "under14"}
             onChange={() => {
               setAgeGroup("under14");
@@ -104,6 +113,8 @@ export function SignupForm({ email, next }: { email: string; next: string }) {
             <input
               type="checkbox"
               name="applyTeacher"
+              aria-invalid={!!errors.applyTeacher || undefined}
+              aria-describedby="applyTeacher-error"
               className={`${checkboxClass} mt-0.5`}
               checked={applyTeacher}
               onChange={(e) => setApplyTeacher(e.target.checked)}
@@ -187,6 +198,7 @@ export function SignupForm({ email, next }: { email: string; next: string }) {
           <input
             type="checkbox"
             name="privacyAgreed"
+            aria-invalid={!!errors.privacyAgreed || undefined}
             defaultChecked={values.privacyAgreed === "on"}
             className={checkboxClass}
             aria-describedby="privacyAgreed-error"

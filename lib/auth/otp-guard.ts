@@ -1,7 +1,6 @@
 import "server-only";
 
 import { normalizeEmail } from "@/lib/auth/email";
-import { type OtpAttemptRecord } from "@/lib/auth/otp-policy";
 import { sha256Hex } from "@/lib/hash";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,7 +9,7 @@ function emailHash(email: string): string {
   return sha256Hex(`otp:${normalizeEmail(email)}`);
 }
 
-/** 새 코드를 보냈을 때 오류 횟수를 초기화한다. */
+/** 새 코드를 보냈을 때 시도 횟수를 초기화한다. */
 export async function resetOtpAttempts(email: string): Promise<void> {
   const now = new Date().toISOString();
   const { error } = await createAdminClient()
@@ -19,31 +18,24 @@ export async function resetOtpAttempts(email: string): Promise<void> {
   if (error) throw new Error(`OTP 기록 초기화 실패: ${error.message}`);
 }
 
-export async function getOtpAttempts(email: string): Promise<OtpAttemptRecord | null> {
-  const { data, error } = await createAdminClient()
-    .from("otp_attempts")
-    .select("fail_count, issued_at")
-    .eq("email_hash", emailHash(email))
-    .maybeSingle();
-  if (error) throw new Error(`OTP 기록 조회 실패: ${error.message}`);
+/**
+ * 검증 전에 시도 1회를 원자적으로 차감하고 누적 횟수를 돌려준다.
+ * (읽고-더하고-쓰기를 DB 함수 한 번으로 처리해 동시 요청으로 제한을 우회하지 못하게 한다.)
+ */
+export async function consumeOtpAttempt(email: string): Promise<number> {
+  const { data, error } = await createAdminClient().rpc("consume_otp_attempt", {
+    p_email_hash: emailHash(email),
+  });
+  if (error || typeof data !== "number") throw new Error(`OTP 시도 기록 실패: ${error?.message}`);
   return data;
 }
 
-/** 코드 검증 실패 1회를 기록하고 누적 횟수를 반환한다. */
-export async function recordOtpFailure(email: string): Promise<number> {
-  const current = await getOtpAttempts(email);
-  const failCount = (current?.fail_count ?? 0) + 1;
-  const now = new Date().toISOString();
-  const { error } = await createAdminClient()
-    .from("otp_attempts")
-    .upsert({
-      email_hash: emailHash(email),
-      fail_count: failCount,
-      issued_at: current?.issued_at ?? now,
-      updated_at: now,
-    });
-  if (error) throw new Error(`OTP 오류 기록 실패: ${error.message}`);
-  return failCount;
+/** 인증 서버 오류로 검증하지 못한 시도는 되돌린다. */
+export async function refundOtpAttempt(email: string): Promise<void> {
+  await createAdminClient().rpc("consume_otp_attempt", {
+    p_email_hash: emailHash(email),
+    p_delta: -1,
+  });
 }
 
 export async function clearOtpAttempts(email: string): Promise<void> {

@@ -226,11 +226,21 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+# 로그인 코드 재발송 간격(F-01: 60초). 원격 프로젝트는 대시보드에서 같은 값으로 맞춘다.
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# 로그인 코드 유효시간(F-01: 10분)
+otp_expiry = 600
+
+# 로그인 코드 메일: 매직 링크 대신 6자리 코드({{ .Token }})를 보여 준다(F-01).
+[auth.email.template.magic_link]
+subject = "[AI Bridge:ON] 로그인 코드"
+content_path = "./supabase/templates/otp-code.html"
+
+[auth.email.template.confirmation]
+subject = "[AI Bridge:ON] 로그인 코드"
+content_path = "./supabase/templates/otp-code.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

@@ -1,0 +1,24 @@
+<!-- AI Bridge:ON 로그인 코드 메일. Supabase 대시보드 Authentication → Emails의
+     "Magic Link"와 "Confirm signup" 템플릿에 이 내용을 붙여 넣는다(링크 대신 6자리 코드 표시). -->
+<div style="font-family: sans-serif; line-height: 1.6; color: #111; max-width: 480px">
+  <h2 style="margin: 0 0 16px">AI Bridge:ON 로그인 코드</h2>
+  <p>아래 6자리 코드를 로그인 화면에 입력해 주세요.</p>
+  <p
+    style="
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      font-family: monospace;
+      background: #f4f4f5;
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-align: center;
+    "
+  >
+    {{ .Token }}
+  </p>
+  <p style="font-size: 13px; color: #555">
+    코드는 10분 동안 유효합니다. 5회 잘못 입력하면 새 코드를 받아야 합니다.<br />
+    본인이 요청하지 않았다면 이 메일을 무시해 주세요.
+  </p>
+</div>

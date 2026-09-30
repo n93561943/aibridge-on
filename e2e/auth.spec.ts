@@ -135,14 +135,28 @@ test.describe("로그인 후 가입", () => {
     expect(sent).toHaveLength(1);
     expect(sent![0].token_hash).toMatch(/^[0-9a-f]{64}$/);
 
-    // 메일 원문 링크 대신 테스트용 토큰을 만들어 넣는다.
-    const { token, tokenHash, expiresAt } = createGuardianToken();
-    await admin.from("guardian_consents").insert({
-      profile_id: user.id,
-      guardian_email: "parent@example.com",
-      token_hash: tokenHash,
-      expires_at: expiresAt.toISOString(),
+    // 배너의 재발송은 60초 간격 제한에 걸린다.
+    await page.getByRole("button", { name: "메일 재발송" }).click();
+    await expect(page.getByText("초 뒤에 다시 보낼 수 있습니다", { exact: false })).toBeVisible();
+
+    // 메일 원문 링크 대신 발송 함수로 새 토큰을 받는다(간격 제한 0초). 가입 때 보낸 토큰은 무효가 된다.
+    const { token, tokenHash, expiresAt } = createGuardianToken(
+      new Date(Date.now() + 60 * 60 * 1000),
+    );
+    const { data: issued } = await admin.rpc("issue_guardian_token", {
+      p_profile_id: user.id,
+      p_token_hash: tokenHash,
+      p_expires_at: expiresAt.toISOString(),
+      p_cooldown_seconds: 0,
+      p_daily_limit: 5,
     });
+    expect(issued).toBe("ok");
+    const { data: tokens } = await admin
+      .from("guardian_consents")
+      .select("revoked_at")
+      .eq("profile_id", user.id)
+      .order("created_at");
+    expect(tokens?.map((t) => t.revoked_at !== null)).toEqual([true, false]);
 
     const consentUrl = `/guardian/consent?token=${token}`;
     await page.goto(consentUrl);
