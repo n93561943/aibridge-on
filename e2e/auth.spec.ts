@@ -123,7 +123,8 @@ test.describe("로그인 후 가입", () => {
     await page.getByLabel("보호자 이메일").fill(`parent+${randomSuffix()}@example.com`);
     await page.getByRole("button", { name: "가입하기" }).click();
 
-    await expect(page).toHaveURL(/\/me/);
+    await expect(page).toHaveURL(/\/me\?notice=guardian_sent/);
+    await expect(page.getByText("보호자에게 동의 메일을 보냈습니다")).toBeVisible();
     await expect(page.getByRole("region", { name: "보호자 동의 안내" })).toBeVisible();
 
     const admin = adminClient();

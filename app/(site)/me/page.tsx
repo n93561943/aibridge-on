@@ -44,6 +44,26 @@ export default async function MePage({
         </Alert>
       )}
 
+      {notice === "guardian_sent" && profile.status === "pending_guardian" && (
+        <Alert>
+          <AlertTitle>보호자에게 동의 메일을 보냈습니다</AlertTitle>
+          <AlertDescription>
+            보호자가 메일의 링크에서 동의하면 모든 회원 기능을 쓸 수 있습니다. 메일이 보이지 않으면
+            스팸함을 확인하거나 위의 [메일 재발송]을 눌러 주세요.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {notice === "guardian_mail_failed" && profile.status === "pending_guardian" && (
+        <Alert variant="destructive">
+          <AlertTitle>보호자 동의 메일을 보내지 못했습니다</AlertTitle>
+          <AlertDescription>
+            가입은 완료되었습니다. 잠시 후 위의 [메일 재발송]을 눌러 다시 보내 주세요. 계속 실패하면
+            사이트 운영자에게 알려 주세요.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>

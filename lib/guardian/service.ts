@@ -43,7 +43,35 @@ export async function sendGuardianConsent(target: Target): Promise<GuardianIssue
       expiresAt,
     }),
   );
-  return mail.ok ? { ok: true } : { ok: false, reason: "mail_failed" };
+  if (mail.ok) return { ok: true };
+
+  await rollbackGuardianToken(target.id, tokenHash);
+  return { ok: false, reason: "mail_failed" };
+}
+
+/**
+ * 메일이 나가지 않은 발급을 되돌린다: 새 토큰 기록을 지워 재발송 횟수에서 빼고,
+ * 이번 발급 때 무효화된 이전 토큰을 다시 살린다(이전 메일의 링크를 계속 쓸 수 있게).
+ * issue_guardian_token은 한 트랜잭션에서 처리하므로 이전 토큰의 revoked_at = 새 토큰의 created_at이다.
+ */
+async function rollbackGuardianToken(profileId: string, tokenHash: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: removed } = await admin
+    .from("guardian_consents")
+    .delete()
+    .eq("profile_id", profileId)
+    .eq("token_hash", tokenHash)
+    .select("created_at");
+  const issuedAt = removed?.[0]?.created_at;
+  if (!issuedAt) return;
+
+  // 그사이 새 토큰이 발급됐다면 유효 토큰 1개 제약(인덱스)에 걸려 갱신되지 않는다. 그 경우는 그대로 둔다.
+  await admin
+    .from("guardian_consents")
+    .update({ revoked_at: null })
+    .eq("profile_id", profileId)
+    .eq("revoked_at", issuedAt)
+    .is("consented_at", null);
 }
 
 export function guardianSendErrorMessage(

@@ -80,6 +80,25 @@ test.describe("보호자 동의·OTP DB 함수", () => {
     expect((await second.call).data).toBe("ok");
 
     const admin = adminClient();
+    // 메일 실패 시 되돌리기(lib/guardian/service.ts)의 전제: 이전 토큰의 revoked_at = 새 토큰의 created_at
+    const { data: rows } = await admin
+      .from("guardian_consents")
+      .select("token_hash, created_at, revoked_at")
+      .eq("profile_id", user.id);
+    const firstRow = rows?.find((r) => r.token_hash === hashGuardianToken(first.token));
+    const secondRow = rows?.find((r) => r.token_hash === hashGuardianToken(second.token));
+    expect(firstRow?.revoked_at).toBe(secondRow?.created_at);
+
+    // 되돌리기 쿼리가 실제 DB에서 이전 토큰을 살리는지 확인한 뒤 원래 상태로 돌린다
+    const { data: restored } = await admin
+      .from("guardian_consents")
+      .update({ revoked_at: null })
+      .eq("profile_id", user.id)
+      .eq("revoked_at", secondRow!.created_at)
+      .is("consented_at", null)
+      .select("token_hash");
+    // 새 토큰이 아직 유효하므로 유효 토큰 1개 제약에 걸려 실패해야 한다(이중 유효 방지)
+    expect(restored ?? []).toHaveLength(0);
     const r1 = await admin.rpc("give_guardian_consent", {
       p_token_hash: hashGuardianToken(first.token),
     });

@@ -81,18 +81,21 @@ export async function completeSignup(_prev: SignupState, formData: FormData): Pr
     };
   }
 
+  let guardianMailSent = true;
   if (input.isUnder14 && input.guardianEmail) {
-    // 발송에 실패해도 가입은 유지하고, 상단 안내 배너에서 다시 보낼 수 있다.
-    await sendGuardianConsent({
+    // 발송에 실패해도 가입은 유지한다. /me에서 실패를 알리고 상단 배너에서 다시 보낼 수 있다.
+    const result = await sendGuardianConsent({
       id: user.id,
       nickname: input.nickname,
       guardian_email: input.guardianEmail,
       created_at: created.created_at,
     });
+    guardianMailSent = result.ok;
   }
 
   revalidatePath("/", "layout");
   if (input.teacher) redirect("/me?notice=teacher_pending");
-  if (input.isUnder14) redirect("/me");
+  if (input.isUnder14)
+    redirect(guardianMailSent ? "/me?notice=guardian_sent" : "/me?notice=guardian_mail_failed");
   redirect(safeNextPath(formData.get("next")));
 }
