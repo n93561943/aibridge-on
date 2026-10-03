@@ -1,9 +1,2 @@
-export type NavItem = {
-  title: string;
-  href: string;
-  external?: boolean;
-  children?: NavItem[];
-};
-
-// P2에서 menus 테이블을 읽어 채운다. 지금은 비어 있다.
-export const navItems: NavItem[] = [];
+// 헤더 메뉴는 DB(menus)에서 읽는다(lib/menus/queries.ts).
+export type { NavItem } from "@/lib/menus/tree";

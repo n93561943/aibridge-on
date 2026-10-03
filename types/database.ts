@@ -80,6 +80,62 @@ export type Database = {
           },
         ]
       }
+      menus: {
+        Row: {
+          board_allow_comments: boolean
+          board_allow_votes: boolean
+          board_write_role: string | null
+          created_at: string
+          external_url: string | null
+          id: string
+          is_active: boolean
+          parent_id: string | null
+          slug: string
+          sort_order: number
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          board_allow_comments?: boolean
+          board_allow_votes?: boolean
+          board_write_role?: string | null
+          created_at?: string
+          external_url?: string | null
+          id?: string
+          is_active?: boolean
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          board_allow_comments?: boolean
+          board_allow_votes?: boolean
+          board_write_role?: string | null
+          created_at?: string
+          external_url?: string | null
+          id?: string
+          is_active?: boolean
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menus_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       otp_attempts: {
         Row: {
           email_hash: string
@@ -194,6 +250,10 @@ export type Database = {
         Returns: string
       }
       purge_expired_accounts: { Args: never; Returns: undefined }
+      reorder_menus: {
+        Args: { p_ids: string[]; p_parent_id?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

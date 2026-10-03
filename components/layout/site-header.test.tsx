@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -57,5 +57,74 @@ describe("SiteHeader", () => {
     await userEvent.click(screen.getByRole("button", { name: "메뉴 열기" }));
     expect(screen.getByRole("link", { name: "가입 마치기" })).toHaveAttribute("href", "/signup");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
+  });
+
+  it("그룹 메뉴는 펼침 메뉴로 하위 메뉴를 보여 준다", async () => {
+    render(
+      <SiteHeader
+        items={[
+          {
+            title: "AI 코딩",
+            href: "/ai-coding/python-basics",
+            children: [
+              { title: "파이썬 기초 코딩", href: "/ai-coding/python-basics" },
+              { title: "온라인 저지", href: "https://judge.example.com", external: true },
+            ],
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "AI 코딩" }));
+    expect(screen.getByRole("menuitem", { name: "파이썬 기초 코딩" })).toHaveAttribute(
+      "href",
+      "/ai-coding/python-basics",
+    );
+    expect(screen.getByRole("menuitem", { name: /온라인 저지/ })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+  });
+
+  it("모바일 메뉴는 그룹 제목 아래에 하위 메뉴를 펼쳐 둔다", async () => {
+    render(
+      <SiteHeader
+        items={[
+          {
+            title: "AI 코딩",
+            href: "/ai-coding/python-basics",
+            children: [{ title: "파이썬 기초 코딩", href: "/ai-coding/python-basics" }],
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "메뉴 열기" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("link", { name: "AI 코딩" })).not.toBeInTheDocument();
+    expect(within(dialog).getByText("AI 코딩")).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "파이썬 기초 코딩" })).toBeInTheDocument();
+  });
+
+  it("관리자에게만 관리자 링크를 보여 준다", async () => {
+    const { unmount } = render(
+      <SiteHeader
+        items={[]}
+        viewer={{ nickname: "관리", role: "admin", pendingGuardian: false }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "내 계정: 관리" }));
+    expect(screen.getByRole("menuitem", { name: "관리자" })).toHaveAttribute(
+      "href",
+      "/admin/menus",
+    );
+    unmount();
+
+    render(
+      <SiteHeader
+        items={[]}
+        viewer={{ nickname: "선생", role: "teacher", pendingGuardian: false }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "내 계정: 선생" }));
+    expect(screen.queryByRole("menuitem", { name: "관리자" })).not.toBeInTheDocument();
   });
 });

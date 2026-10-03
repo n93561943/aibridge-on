@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 
 import { Logo } from "./logo";
 import { MobileNav } from "./mobile-nav";
-import { navItems as defaultNavItems, type NavItem } from "./nav-items";
+import { NavGroupMenu } from "./nav-group-menu";
+import type { NavItem } from "./nav-items";
 import { UserMenu } from "./user-menu";
 import type { HeaderViewer } from "./viewer";
 
 export function SiteHeader({
-  items = defaultNavItems,
+  items = [],
   viewer = null,
 }: {
   items?: NavItem[];
@@ -20,16 +21,20 @@ export function SiteHeader({
       <div className="container-site flex h-(--header-height) items-center gap-4">
         <Logo />
         <nav aria-label="주 메뉴" className="hidden flex-1 items-center gap-1 md:flex">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-              {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            >
-              {item.title}
-            </Link>
-          ))}
+          {items.map((item) =>
+            item.children ? (
+              <NavGroupMenu key={item.title + item.href} item={item} />
+            ) : (
+              <Link
+                key={item.title + item.href}
+                href={item.href}
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
+                {item.title}
+              </Link>
+            ),
+          )}
         </nav>
         <div className="ml-auto flex items-center gap-1">
           {viewer ? (

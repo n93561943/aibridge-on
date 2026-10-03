@@ -134,6 +134,15 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - `ADMIN_EMAILS`의 이메일은 첫 로그인 후 가입 정보 입력(`/signup`)을 마치면 관리자로 만들어진다(SPEC F-01). 이미 가입한 계정을 관리자로 바꾸는 것은 관리자 화면(P6)에서 한다.
 - 만 14세 미만 가입 후 7일 안에 보호자 동의가 없는 계정, 로그인만 하고 가입을 끝내지 않은 채 7일이 지난 계정은 `pg_cron` 작업(`purge-expired-accounts`, 매시간)이 삭제한다.
 
+## 메뉴(P2)
+
+- 헤더 메뉴는 `menus` 테이블에서 읽는다. 관리자는 헤더의 내 계정 메뉴 → **관리자**(`/admin/menus`)에서 추가·수정·숨기기·삭제·순서 변경을 한다. 바꾸면 헤더에 바로 반영된다(`menus` 캐시 태그 재검증).
+- 시드 메뉴(SPEC 4장)는 마이그레이션 `p2_menus`에 들어 있어 `npx supabase db push` 때 함께 들어간다. 같은 slug가 이미 있으면 건너뛴다.
+- **온라인 저지**는 주소가 정해지지 않아 비활성으로 시드된다. 주소가 정해지면 `/admin/menus`에서 수정 → 외부 주소 입력 → 보이기.
+- 규칙: 최대 2단계, 하위 메뉴는 그룹 아래에만. 그룹은 첫 번째 보이는 하위 메뉴로 이동한다. 하위 메뉴가 있는 메뉴는 삭제할 수 없다. 게시물이 있는 메뉴 삭제 처리(옮기기·휴지통)는 P3에서 추가한다.
+- slug는 영문 소문자·숫자·하이픈만 쓴다. 기존 경로(`admin`, `login`, `me`, `search` 등)와 겹치는 값은 막는다(`lib/menus/schema.ts`의 `RESERVED_SLUGS` = DB check 제약).
+- 메뉴 E2E(`e2e/menus.spec.ts`)는 slug가 `e2e-`로 시작하는 메뉴를 만들고 지운다. 중간에 끊기면 Table Editor에서 `e2e-`로 시작하는 메뉴를 지운다(하위 메뉴부터).
+
 ## 배포 (GitHub → Vercel)
 
 1. GitHub 저장소에 push
@@ -151,6 +160,8 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 ```
 app/
   (site)/          공개 사이트 (헤더·푸터 레이아웃)
+    [menu]/        메뉴 주소(/메뉴, /그룹/하위메뉴)
+  admin/           관리자 화면 (admin 전용, menus = 메뉴 관리)
   api/health/      연결 상태 확인
 components/
   layout/          헤더·푸터·로고·모바일 메뉴
@@ -158,6 +169,7 @@ components/
 lib/
   env.ts           공개 환경변수 (zod 검증)
   env.server.ts    서버 전용 환경변수
+  menus/           메뉴 입력 검증·트리 변환·조회(캐시)
   site.ts          사이트명·부제·AI Bridge 4단계
   supabase/        client(브라우저) / server(쿠키 세션) / admin(service role) / middleware
 supabase/          config.toml, migrations, seed.sql

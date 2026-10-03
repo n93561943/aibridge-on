@@ -8,10 +8,11 @@ import type { HeaderViewer } from "@/components/layout/viewer";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { toUserRole } from "@/lib/auth/roles";
 import { isSignupExemptPath } from "@/lib/auth/signup-gate";
+import { getNavItems } from "@/lib/menus/queries";
 import { PATHNAME_HEADER } from "@/lib/supabase/middleware";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
+  const [user, navItems] = await Promise.all([getCurrentUser(), getNavItems()]);
 
   // 로그인했지만 가입 정보를 입력하지 않았으면 /signup으로 보낸다.
   if (user && !user.profile) {
@@ -35,7 +36,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       >
         본문 바로가기
       </a>
-      <SiteHeader viewer={viewer} />
+      <SiteHeader items={navItems} viewer={viewer} />
       {viewer?.pendingGuardian && <GuardianPendingBanner />}
       <main id="main" tabIndex={-1} className="flex-1 outline-none">
         {children}

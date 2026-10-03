@@ -51,8 +51,8 @@ export async function requireMember(
 }
 
 /** 관리자 필수. 정지된 관리자는 거부한다. */
-export async function requireAdmin(): Promise<CurrentUser & { profile: Profile }> {
-  const user = await requireMember();
+export async function requireAdmin(nextPath?: string): Promise<CurrentUser & { profile: Profile }> {
+  const user = await requireMember(nextPath);
   if (toUserRole(user.profile.role) !== "admin" || user.profile.status !== "active") redirect("/");
   return user;
 }

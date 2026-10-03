@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { ChevronDownIcon, LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 
 import { signOut } from "@/app/(site)/auth-actions";
@@ -41,6 +41,14 @@ export function UserMenu({ viewer }: { viewer: HeaderViewer }) {
             {viewer.nickname ? "내 정보" : "가입 마치기"}
           </Link>
         </DropdownMenuItem>
+        {viewer.role === "admin" && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin/menus">
+              <SettingsIcon />
+              관리자
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <form action={signOut}>
           <DropdownMenuItem asChild>
