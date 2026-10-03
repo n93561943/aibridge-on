@@ -17,7 +17,7 @@ export function SiteHeader({
   viewer?: HeaderViewer | null;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur supports-backdrop-filter:bg-background/70">
+    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur supports-backdrop-filter:bg-background/70 print:hidden">
       <div className="container-site flex h-(--header-height) items-center gap-4">
         <Logo />
         <nav aria-label="주 메뉴" className="hidden flex-1 items-center gap-1 md:flex">

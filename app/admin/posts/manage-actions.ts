@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/current-user";
@@ -10,6 +10,7 @@ import { POST_FILES_BUCKET, storageSafeName } from "@/lib/posts/constants";
 import { type Block, extractPlainText } from "@/lib/posts/content";
 import { deletePostsWithFiles } from "@/lib/posts/purge";
 import { pickUniqueSlug } from "@/lib/posts/slug";
+import { POSTS_CACHE_TAG } from "@/lib/posts/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -23,6 +24,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 function revalidatePosts() {
   revalidatePath("/admin/posts");
   revalidatePath("/admin/trash");
+  revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");
 }
 

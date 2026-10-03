@@ -47,9 +47,12 @@ function timeLabel(iso: string) {
 export function EditorShell({
   post,
   judgeUrlTemplate,
+  publicPath,
 }: {
   post: EditorPost;
   judgeUrlTemplate: string | null;
+  /** 사이트 공개 주소. 메뉴가 비활성이면 null */
+  publicPath: string | null;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(post.editingTitle);
@@ -219,6 +222,17 @@ export function EditorShell({
           </span>
           <SaveIndicator state={saveState} onRetry={() => void save(true)} />
           <div className="ml-auto flex flex-wrap items-center gap-1">
+            {publicPath && !readOnly && (
+              <Button asChild variant="ghost" className="h-9">
+                <a
+                  href={published && !hasUnpublished ? publicPath : `${publicPath}?preview=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {published && !hasUnpublished ? "사이트에서 보기" : "미리보기"}
+                </a>
+              </Button>
+            )}
             <Button variant="ghost" className="h-9" onClick={() => setRevisionsOpen(true)}>
               <HistoryIcon />
               이력

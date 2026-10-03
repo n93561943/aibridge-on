@@ -84,23 +84,6 @@ export function toNavItems(tree: MenuNode[]): NavItem[] {
   return items;
 }
 
-/**
- * URL 경로 조각(["ai-coding", "python-basics"])에 해당하는 활성 메뉴를 찾는다.
- * 하위 메뉴는 반드시 실제 상위 메뉴 주소 아래에서만 찾는다.
- */
-export function findMenuByPath(
-  tree: MenuNode[],
-  segments: string[],
-): { menu: MenuNode; parent: MenuNode | null } | null {
-  const [first, second, ...rest] = segments;
-  if (!first || rest.length > 0) return null;
-  const root = tree.find((n) => n.slug === first && n.is_active);
-  if (!root) return null;
-  if (second === undefined) return { menu: root, parent: null };
-  const child = root.children.find((c) => c.slug === second && c.is_active);
-  return child ? { menu: child, parent: root } : null;
-}
-
 /** 같은 상위 메뉴(parentId, 최상위는 null) 안에서 from번째 메뉴를 to번째로 옮긴 새 트리 */
 export function moveSibling(
   tree: MenuNode[],
@@ -124,4 +107,38 @@ export function moveSibling(
 export function siblingsOf(tree: MenuNode[], parentId: string | null): MenuNode[] {
   if (parentId === null) return tree;
   return tree.find((n) => n.id === parentId)?.children ?? [];
+}
+
+export type ResolvedPath = {
+  menu: MenuNode;
+  parent: MenuNode | null;
+  /** 글 주소. null이면 메뉴 자체(목록) 페이지 */
+  postSlug: string | null;
+};
+
+/**
+ * 공개 주소 해석: 하위 메뉴는 그룹 아래에만 있으므로(P2) 첫 칸이 그룹이면 둘째 칸은 하위 메뉴,
+ * 아니면 둘째 칸은 글 주소다.
+ * - /메뉴, /메뉴/글
+ * - /그룹/하위메뉴, /그룹/하위메뉴/글
+ */
+export function resolveMenuPath(tree: MenuNode[], segments: string[]): ResolvedPath | null {
+  const [first, second, third, ...rest] = segments;
+  if (!first || rest.length > 0) return null;
+  const root = tree.find((n) => n.slug === first && n.is_active);
+  if (!root) return null;
+
+  if (root.type !== "group") {
+    if (third !== undefined) return null;
+    return { menu: root, parent: null, postSlug: second ?? null };
+  }
+  if (second === undefined) return { menu: root, parent: null, postSlug: null };
+  const child = root.children.find((c) => c.slug === second && c.is_active);
+  if (!child) return null;
+  return { menu: child, parent: root, postSlug: third ?? null };
+}
+
+/** 글 공개 주소 */
+export function postPath(menu: MenuRow, parent: MenuRow | null, postSlug: string): string {
+  return `${menuPath(menu, parent) ?? `/${menu.slug}`}/${postSlug}`;
 }

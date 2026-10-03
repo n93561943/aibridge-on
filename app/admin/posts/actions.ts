@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -21,6 +21,7 @@ import {
   postTitleSchema,
 } from "@/lib/posts/content";
 import { newPostSlug, REVISION_INTERVAL_MS } from "@/lib/posts/editor";
+import { POSTS_CACHE_TAG } from "@/lib/posts/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -208,6 +209,7 @@ export async function publishPost(id: string): Promise<ActionResult> {
   if (error) return { ok: false, message: "공개하지 못했습니다. 잠시 후 다시 시도해 주세요." };
 
   await addRevision(supabase, id, admin.id, body.title, body.content, true);
+  revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -233,6 +235,7 @@ export async function unpublishPost(id: string): Promise<ActionResult> {
     })
     .eq("id", id);
   if (error) return { ok: false, message: "초안으로 돌리지 못했습니다." };
+  revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -307,6 +310,7 @@ export async function updatePostMeta(
   if (error) return { message: FAIL };
 
   revalidatePath(editorPath(id));
+  revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");
   return { ok: true, message: "게시물 정보를 저장했습니다." };
 }

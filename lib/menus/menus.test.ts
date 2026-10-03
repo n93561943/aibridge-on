@@ -4,9 +4,10 @@ import { menuInputSchema, RESERVED_SLUGS } from "./schema";
 import type { MenuRow } from "./schema";
 import {
   buildMenuTree,
-  findMenuByPath,
   menuHref,
   moveSibling,
+  postPath,
+  resolveMenuPath,
   siblingsOf,
   toNavItems,
 } from "./tree";
@@ -198,25 +199,6 @@ describe("menuHref·toNavItems", () => {
   });
 });
 
-describe("findMenuByPath", () => {
-  const tree = buildMenuTree(Object.values(seedRows()));
-
-  it("대메뉴와 하위 메뉴를 찾는다", () => {
-    expect(findMenuByPath(tree, ["ai-literacy"])?.menu.slug).toBe("ai-literacy");
-    const found = findMenuByPath(tree, ["ai-coding", "python-basics"]);
-    expect(found?.menu.slug).toBe("python-basics");
-    expect(found?.parent?.slug).toBe("ai-coding");
-  });
-
-  it("다른 상위 메뉴 아래 주소나 비활성·없는 메뉴는 찾지 않는다", () => {
-    expect(findMenuByPath(tree, ["python-basics"])).toBeNull();
-    expect(findMenuByPath(tree, ["ai-literacy", "python-basics"])).toBeNull();
-    expect(findMenuByPath(tree, ["ai-coding", "online-judge"])).toBeNull();
-    expect(findMenuByPath(tree, ["nope"])).toBeNull();
-    expect(findMenuByPath(tree, ["ai-coding", "python-basics", "x"])).toBeNull();
-  });
-});
-
 describe("moveSibling", () => {
   const tree = buildMenuTree(Object.values(seedRows()));
 
@@ -239,5 +221,51 @@ describe("moveSibling", () => {
   it("범위를 벗어나면 그대로 둔다", () => {
     expect(moveSibling(tree, null, 0, -1)).toBe(tree);
     expect(moveSibling(tree, null, 0, 4)).toBe(tree);
+  });
+});
+
+describe("resolveMenuPath", () => {
+  const tree = buildMenuTree(Object.values(seedRows()));
+
+  it("대메뉴·대메뉴 글", () => {
+    expect(resolveMenuPath(tree, ["ai-literacy"])).toMatchObject({
+      menu: { slug: "ai-literacy" },
+      parent: null,
+      postSlug: null,
+    });
+    expect(resolveMenuPath(tree, ["ai-literacy", "lesson-1"])).toMatchObject({
+      menu: { slug: "ai-literacy" },
+      postSlug: "lesson-1",
+    });
+  });
+
+  it("그룹 아래 하위 메뉴·그 글", () => {
+    expect(resolveMenuPath(tree, ["ai-coding"])).toMatchObject({
+      menu: { slug: "ai-coding" },
+      postSlug: null,
+    });
+    expect(resolveMenuPath(tree, ["ai-coding", "python-basics"])).toMatchObject({
+      menu: { slug: "python-basics" },
+      parent: { slug: "ai-coding" },
+      postSlug: null,
+    });
+    expect(resolveMenuPath(tree, ["ai-coding", "python-basics", "for-loop"])).toMatchObject({
+      menu: { slug: "python-basics" },
+      postSlug: "for-loop",
+    });
+  });
+
+  it("없는 메뉴·비활성 하위 메뉴·너무 긴 주소는 null", () => {
+    expect(resolveMenuPath(tree, ["nope"])).toBeNull();
+    expect(resolveMenuPath(tree, ["ai-coding", "online-judge"])).toBeNull();
+    expect(resolveMenuPath(tree, ["ai-coding", "nope"])).toBeNull();
+    expect(resolveMenuPath(tree, ["ai-literacy", "a", "b"])).toBeNull();
+    expect(resolveMenuPath(tree, ["ai-coding", "python-basics", "a", "b"])).toBeNull();
+  });
+
+  it("글 주소 만들기", () => {
+    const r = seedRows();
+    expect(postPath(r.literacy, null, "lesson-1")).toBe("/ai-literacy/lesson-1");
+    expect(postPath(r.python, r.coding, "for-loop")).toBe("/ai-coding/python-basics/for-loop");
   });
 });

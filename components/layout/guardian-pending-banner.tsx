@@ -12,7 +12,7 @@ export function GuardianPendingBanner() {
     <div
       role="region"
       aria-label="보호자 동의 안내"
-      className="border-b bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+      className="border-b bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100 print:hidden"
     >
       <div className="container-site flex flex-col gap-2 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <p>
