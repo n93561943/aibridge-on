@@ -39,6 +39,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string
+          post_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type: string
+          post_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          post_id?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guardian_consents: {
         Row: {
           consented_at: string | null
@@ -157,6 +195,144 @@ export type Database = {
         }
         Relationships: []
       }
+      post_revisions: {
+        Row: {
+          content: Json
+          created_at: string
+          editor_id: string | null
+          id: string
+          post_id: string
+          title: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          editor_id?: string | null
+          id?: string
+          post_id: string
+          title: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          editor_id?: string | null
+          id?: string
+          post_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_revisions_editor_id_fkey"
+            columns: ["editor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_revisions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          ai_discussion_enabled: boolean
+          author_id: string | null
+          comment_count: number
+          content: Json
+          content_text: string
+          cover_image: string | null
+          created_at: string
+          deleted_at: string | null
+          draft_content: Json | null
+          draft_saved_at: string | null
+          draft_title: string | null
+          hidden_at: string | null
+          id: string
+          is_pinned: boolean
+          lesson_no: number | null
+          menu_id: string | null
+          published_at: string | null
+          score: number
+          slug: string
+          sort_order: number
+          status: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_discussion_enabled?: boolean
+          author_id?: string | null
+          comment_count?: number
+          content?: Json
+          content_text?: string
+          cover_image?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          draft_content?: Json | null
+          draft_saved_at?: string | null
+          draft_title?: string | null
+          hidden_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          lesson_no?: number | null
+          menu_id?: string | null
+          published_at?: string | null
+          score?: number
+          slug: string
+          sort_order?: number
+          status?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_discussion_enabled?: boolean
+          author_id?: string | null
+          comment_count?: number
+          content?: Json
+          content_text?: string
+          cover_image?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          draft_content?: Json | null
+          draft_saved_at?: string | null
+          draft_title?: string | null
+          hidden_at?: string | null
+          id?: string
+          is_pinned?: boolean
+          lesson_no?: number | null
+          menu_id?: string | null
+          published_at?: string | null
+          score?: number
+          slug?: string
+          sort_order?: number
+          status?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_menu_id_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -236,6 +412,14 @@ export type Database = {
         Returns: number
       }
       current_user_role: { Args: never; Returns: string }
+      get_post_editor_content: {
+        Args: { p_post_id: string }
+        Returns: {
+          content: Json
+          draft_content: Json
+          draft_title: string
+        }[]
+      }
       give_guardian_consent: { Args: { p_token_hash: string }; Returns: string }
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }

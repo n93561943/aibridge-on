@@ -69,6 +69,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 | `RESEND_API_KEY`, `MAIL_FROM`                               | 서버 전용 | 메일 발송(P1부터)                                       |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_PRICE_*`        | 서버 전용 | AI 토론 주제 생성(P7)                                   |
 | `ADMIN_EMAILS`                                              | 서버 전용 | 최초 관리자 이메일(쉼표 구분, P1부터)                   |
+| `CRON_SECRET`                                               | 서버 전용 | Vercel Cron 인증(휴지통 자동 삭제, P3부터)              |
 
 서버 전용 값은 `lib/env.server.ts`(`import "server-only"`)를 통해서만 읽는다. 클라이언트 컴포넌트에서 가져오면 빌드가 실패한다.
 
@@ -142,6 +143,14 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - 규칙: 최대 2단계, 하위 메뉴는 그룹 아래에만. 그룹은 첫 번째 보이는 하위 메뉴로 이동한다. 하위 메뉴가 있는 메뉴는 삭제할 수 없다. 게시물이 있는 메뉴 삭제 처리(옮기기·휴지통)는 P3에서 추가한다.
 - slug는 영문 소문자·숫자·하이픈만 쓴다. 기존 경로(`admin`, `login`, `me`, `search` 등)와 겹치는 값은 막는다(`lib/menus/schema.ts`의 `RESERVED_SLUGS` = DB check 제약).
 - 메뉴 E2E(`e2e/menus.spec.ts`)는 slug가 `e2e-`로 시작하는 메뉴를 만들고 지운다. 중간에 끊기면 Table Editor에서 `e2e-`로 시작하는 메뉴를 지운다(하위 메뉴부터).
+
+## 게시물(P3)
+
+- 테이블: `posts`(series 문서·board 글), `post_revisions`(게시물당 최근 20개), `attachments`. 파일은 Storage `post-files` 버킷(공개 읽기, 파일 최대 50MB·이미지 10MB, SVG·HTML 불가).
+- **본문 보호**: 비회원·회원은 `posts.content`·`draft_*` 컬럼을 DB에서 직접 읽을 수 없다(컬럼 권한). 관리자는 `get_post_editor_content()` RPC로 읽고, 공개 화면은 서버가 교사 전용 블록을 뺀 뒤 내려준다. 쿼리에서 `select("*")` 대신 컬럼을 나열한다.
+- **공개 글 수정**: 공개된 글을 고치면 `draft_title`·`draft_content`에만 저장되고, "변경 사항 공개"를 눌러야 사이트에 반영된다.
+- **휴지통 자동 삭제**: Vercel Cron이 매일 03:00(KST) `/api/cron/purge-trash`를 호출해 30일 지난 글과 파일을 지운다. Vercel 환경변수에 `CRON_SECRET`(16자 이상 무작위 값, 예: `openssl rand -hex 32`)을 넣어야 동작한다.
+- 게시물이 있는 메뉴는 삭제할 수 없다(DB 제약 + 관리자 화면 안내).
 
 ## 배포 (GitHub → Vercel)
 

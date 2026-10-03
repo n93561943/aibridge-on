@@ -162,6 +162,19 @@ export async function deleteMenu(id: string): Promise<MenuActionResult> {
     return { ok: false, message: "하위 메뉴가 있습니다. 하위 메뉴를 먼저 옮기거나 삭제해 주세요." };
   }
 
+  // 게시물을 옮기거나 휴지통으로 보내는 선택지는 게시물 관리(P3-3)에서 추가한다.
+  const { count: postCount } = await supabase
+    .from("posts")
+    .select("id", { count: "exact", head: true })
+    .eq("menu_id", id)
+    .is("deleted_at", null);
+  if (postCount) {
+    return {
+      ok: false,
+      message: `게시물이 ${postCount}개 있습니다. 게시물을 다른 메뉴로 옮기거나 휴지통으로 보낸 뒤 삭제해 주세요.`,
+    };
+  }
+
   const { data, error } = await supabase.from("menus").delete().eq("id", id).select("title");
   if (error) return { ok: false, ...dbErrorMessage(error, "메뉴를 삭제하지 못했습니다.") };
   if (!data?.length) return { ok: false, message: "메뉴를 찾을 수 없습니다. 새로고침해 주세요." };
