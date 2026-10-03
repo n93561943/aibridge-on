@@ -23,6 +23,7 @@ export const ALLOWED_BLOCK_TYPES = [
   "divider",
   "callout",
   "youtube",
+  "judgeLink",
   ...TEACHER_ONLY_BLOCK_TYPES,
 ] as const;
 

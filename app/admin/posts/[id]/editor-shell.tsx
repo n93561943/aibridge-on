@@ -44,7 +44,13 @@ function timeLabel(iso: string) {
   return new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function EditorShell({ post }: { post: EditorPost }) {
+export function EditorShell({
+  post,
+  judgeUrlTemplate,
+}: {
+  post: EditorPost;
+  judgeUrlTemplate: string | null;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState(post.editingTitle);
   const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
@@ -328,6 +334,7 @@ export function EditorShell({ post }: { post: EditorPost }) {
             initialContent={initialContent}
             onChange={onContentChange}
             uploadFile={uploadFile}
+            judgeUrlTemplate={judgeUrlTemplate}
           />
         </div>
       </div>

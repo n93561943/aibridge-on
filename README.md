@@ -151,6 +151,15 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - **본문 보호**: 비회원·회원은 `posts.content`·`draft_*` 컬럼을 DB에서 직접 읽을 수 없다(컬럼 권한). 관리자는 `get_post_editor_content()` RPC로 읽고, 공개 화면은 서버가 교사 전용 블록을 뺀 뒤 내려준다. 쿼리에서 `select("*")` 대신 컬럼을 나열한다.
 - **공개 글 수정**: 공개된 글을 고치면 `draft_title`·`draft_content`에만 저장되고, "변경 사항 공개"를 눌러야 사이트에 반영된다.
 - **휴지통 자동 삭제**: Vercel Cron이 매일 03:00(KST) `/api/cron/purge-trash`를 호출해 30일 지난 글과 파일을 지운다. Vercel 환경변수에 `CRON_SECRET`(16자 이상 무작위 값, 예: `openssl rand -hex 32`)을 넣어야 동작한다.
+- **커스텀 블록**: 콜아웃, YouTube, 교사 전용 박스(제목 아래 Tab으로 들여 쓴 블록이 박스 안 내용, 공개 본문·검색 평문에서 통째로 빠짐), 온라인 저지 문제 링크(문제 번호만 저장).
+- **온라인 저지 문제 주소**: 설정 화면(`/admin/settings`, 이후 단계) 전까지는 Supabase SQL Editor에서 넣는다. 넣는 즉시 문제 버튼이 활성화되고, 지우면 "준비 중"으로 돌아간다.
+
+  ```sql
+  insert into public.site_settings (key, value)
+  values ('online_judge_problem_url', '"https://온라인저지주소/problem/{id}"')
+  on conflict (key) do update set value = excluded.value;
+  ```
+
 - **게시물 관리**(`/admin/posts`): 메뉴·상태 필터, 제목 검색, 여러 개 선택 → 다른 메뉴로 이동(게시글↔게시판이면 경고, 주소가 겹치면 `-2` 등을 붙임)·휴지통, 복제(초안, 첨부 파일도 새 경로로 복사), 메뉴 하나만 고르면 차시 순서 드래그.
 - **휴지통**(`/admin/trash`): 복구·영구 삭제(파일 포함). 메뉴가 삭제된 글은 복구할 메뉴를 고른다.
 - 게시물이 있는 메뉴를 삭제하면 "다른 메뉴로 옮긴 뒤 삭제" 또는 "함께 휴지통으로"를 고른다(DB도 휴지통에 없는 글이 있는 메뉴 삭제를 막는다).

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/current-user";
 import { getPostForEditor } from "@/lib/posts/editor";
+import { getOnlineJudgeTemplate } from "@/lib/settings/queries";
 
 import { EditorShell } from "./editor-shell";
 
@@ -13,8 +14,11 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   await requireAdmin(`/admin/posts/${id}`);
   if (!z.uuid().safeParse(id).success) notFound();
-  const post = await getPostForEditor(id);
+  const [post, judgeUrlTemplate] = await Promise.all([
+    getPostForEditor(id),
+    getOnlineJudgeTemplate(),
+  ]);
   if (!post) notFound();
 
-  return <EditorShell post={post} />;
+  return <EditorShell post={post} judgeUrlTemplate={judgeUrlTemplate} />;
 }

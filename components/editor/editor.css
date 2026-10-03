@@ -1,7 +1,19 @@
-/* BlockNote 에디터를 사이트 글꼴(Pretendard)에 맞춘다. */
-.post-editor.bn-container {
+/* BlockNote 에디터를 사이트 글꼴(Pretendard)에 맞춘다. Mantine 테마 변수보다 우선하도록 속성 선택자까지 붙인다. */
+.bn-container.post-editor,
+.bn-container.post-editor[data-color-scheme] {
   --bn-font-family: var(--font-pretendard), system-ui, sans-serif;
 }
 .post-editor .bn-editor {
+  font-family: var(--font-pretendard), system-ui, sans-serif;
   word-break: keep-all;
+}
+
+/* 교사 전용 박스: 박스 제목과 들여 쓴 하위 블록을 함께 감싼다.
+   커스텀 React 블록은 .node-<type> 래퍼 안에 그려진다. */
+.post-editor .bn-block:has(> .node-teacherBox) {
+  border: 1px dashed rgb(139 92 246 / 0.6);
+  border-radius: 0.5rem;
+  background: rgb(139 92 246 / 0.06);
+  padding: 0.25rem 0.5rem 0.5rem;
+  margin: 0.25rem 0;
 }

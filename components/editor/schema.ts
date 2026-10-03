@@ -2,6 +2,8 @@ import { BlockNoteSchema, createCodeBlockSpec, defaultBlockSpecs } from "@blockn
 import { codeBlockOptions } from "@blocknote/code-block";
 
 import { calloutBlock } from "./blocks/callout";
+import { judgeLinkBlock } from "./blocks/judge-link";
+import { teacherBoxBlock } from "./blocks/teacher-box";
 import { youtubeBlock } from "./blocks/youtube";
 
 // 오디오·동영상 업로드 블록은 쓰지 않는다(동영상은 YouTube 블록으로).
@@ -16,6 +18,8 @@ export const postSchema = BlockNoteSchema.create({
     codeBlock: createCodeBlockSpec({ ...codeBlockOptions, defaultLanguage: "python" }),
     callout: calloutBlock(),
     youtube: youtubeBlock(),
+    teacherBox: teacherBoxBlock(),
+    judgeLink: judgeLinkBlock(),
   },
 });
 
