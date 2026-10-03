@@ -159,3 +159,27 @@ export async function getPreviewPost(
     isDraftPreview: true,
   };
 }
+
+export type RecentPost = PublicPostSummary & { menuId: string };
+
+/**
+ * 최근 공개 글(홈 F-11). 메뉴 종류(게시글·게시판)와 활성 여부는 호출하는 쪽에서 메뉴 트리로 거른다.
+ * 비활성 메뉴 글이 섞여 개수가 모자라지 않게 넉넉히 가져온다.
+ */
+export const listRecentPublished = unstable_cache(
+  async (limit: number): Promise<RecentPost[]> => {
+    const { data, error } = await createAdminClient()
+      .from("posts")
+      .select(`${SUMMARY_COLUMNS}, menu_id`)
+      .eq("status", "published")
+      .is("deleted_at", null)
+      .is("hidden_at", null)
+      .not("menu_id", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(`최근 게시물 조회 실패: ${error.message}`);
+    return data.map((row) => ({ ...toSummary(row), menuId: row.menu_id! }));
+  },
+  ["recent-published-posts"],
+  { tags: [POSTS_CACHE_TAG], revalidate: 3600 },
+);

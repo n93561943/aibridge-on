@@ -142,6 +142,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - **온라인 저지**는 주소가 정해지지 않아 비활성으로 시드된다. 주소가 정해지면 `/admin/menus`에서 수정 → 외부 주소 입력 → 보이기.
 - 규칙: 최대 2단계, 하위 메뉴는 그룹 아래에만. 그룹은 첫 번째 보이는 하위 메뉴로 이동한다. 하위 메뉴가 있는 메뉴는 삭제할 수 없다. 게시물이 있는 메뉴 삭제 처리(옮기기·휴지통)는 P3에서 추가한다.
 - slug는 영문 소문자·숫자·하이픈만 쓴다. 기존 경로(`admin`, `login`, `me`, `search` 등)와 겹치는 값은 막는다(`lib/menus/schema.ts`의 `RESERVED_SLUGS` = DB check 제약).
+- 공개 화면 E2E는 메뉴를 관리자 화면으로 만들고 지운다(`e2e/helpers/menus.ts`). 공개 메뉴 트리가 캐시되어 DB에 직접 넣은 메뉴는 바로 보이지 않기 때문이다.
 - E2E는 한 번에 많이 돌리면 Supabase 로그인 코드 검증 한도(기본 5분에 30회)에 걸린다(`Request rate limit reached`). 5분 뒤 다시 돌리거나 `--workers=2`로 나눠 돌린다.
 - 메뉴 E2E(`e2e/menus.spec.ts`)는 slug가 `e2e-`로 시작하는 메뉴를 만들고 지운다. 중간에 끊기면 Table Editor에서 `e2e-`로 시작하는 메뉴를 지운다(하위 메뉴부터).
 
@@ -152,13 +153,7 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - **공개 글 수정**: 공개된 글을 고치면 `draft_title`·`draft_content`에만 저장되고, "변경 사항 공개"를 눌러야 사이트에 반영된다.
 - **휴지통 자동 삭제**: Vercel Cron이 매일 03:00(KST) `/api/cron/purge-trash`를 호출해 30일 지난 글과 파일을 지운다. Vercel 환경변수에 `CRON_SECRET`(16자 이상 무작위 값, 예: `openssl rand -hex 32`)을 넣어야 동작한다.
 - **커스텀 블록**: 콜아웃, YouTube, 교사 전용 박스(제목 아래 Tab으로 들여 쓴 블록이 박스 안 내용, 공개 본문·검색 평문에서 통째로 빠짐), 온라인 저지 문제 링크(문제 번호만 저장).
-- **온라인 저지 문제 주소**: 설정 화면(`/admin/settings`, 이후 단계) 전까지는 Supabase SQL Editor에서 넣는다. 넣는 즉시 문제 버튼이 활성화되고, 지우면 "준비 중"으로 돌아간다.
-
-  ```sql
-  insert into public.site_settings (key, value)
-  values ('online_judge_problem_url', '"https://온라인저지주소/problem/{id}"')
-  on conflict (key) do update set value = excluded.value;
-  ```
+- **온라인 저지 문제 주소**·**홈 문구**: 관리자 → 설정(`/admin/settings`)에서 바꾼다. 문제 주소를 넣으면 문제 버튼이 바로 활성화되고, 비우면 "준비 중"으로 돌아간다.
 
 - **게시물 관리**(`/admin/posts`): 메뉴·상태 필터, 제목 검색, 여러 개 선택 → 다른 메뉴로 이동(게시글↔게시판이면 경고, 주소가 겹치면 `-2` 등을 붙임)·휴지통, 복제(초안, 첨부 파일도 새 경로로 복사), 메뉴 하나만 고르면 차시 순서 드래그.
 - **휴지통**(`/admin/trash`): 복구·영구 삭제(파일 포함). 메뉴가 삭제된 글은 복구할 메뉴를 고른다.
@@ -166,6 +161,16 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - **에디터**(`/admin/posts/[id]`): BlockNote 0.51.4(Mantine UI). 0.52부터는 협업용 선택 의존성(yjs v14 rc) 때문에 npm 설치가 실패해 버전을 고정했다. 블록 종류를 바꾸면 `components/editor/schema.ts`와 `lib/posts/content.ts`의 `ALLOWED_BLOCK_TYPES`를 함께 고친다.
   - 입력이 멈추고 3초 뒤 자동 저장, Ctrl/⌘+S로 바로 저장. 이력은 직접 저장·공개·복원 때와 자동 저장 10분마다 남는다.
   - 파일은 서버가 발급한 서명 URL로 브라우저가 Storage에 바로 올리고(Vercel 요청 크기 제한 회피), 서버가 실제 크기·형식을 다시 확인한 뒤 `attachments`에 기록한다.
+
+## 자료 열람·검색·홈(P4)
+
+- 공개 주소: `/메뉴`, `/메뉴/글`, `/그룹/하위메뉴`, `/그룹/하위메뉴/글`(`app/(site)/[...path]`). 하위 메뉴는 그룹 아래에만 있으므로 주소가 겹치지 않는다.
+- 본문은 서버 컴포넌트 렌더러(`components/content/post-content.tsx`)가 블록 JSON을 그린다. HTML 문자열을 넣지 않고, 코드 블록은 서버에서 구문 강조한다. 블록 종류를 추가하면 렌더러에도 추가한다.
+- 교사 전용 박스: 학생·비회원에게는 서버가 빼고 보낸다(페이지 HTML에도 없음). 승인된 교사·관리자에게만 보인다.
+- 관리자는 초안·미공개 수정본을 공개 주소에서 미리 본다(`?preview=1`, 에디터의 "미리보기"). 학생·비회원에게는 404.
+- 공개 글·최근 글 조회는 캐시한다(`posts` 태그). 관리자 화면에서 게시물을 바꾸면 바로 갱신된다. **DB에서 직접 고친 내용은 최대 1시간 뒤에 반영**되므로, 급하면 관리자 화면에서 아무 게시물이나 다시 공개하거나 설정을 저장한다.
+- 검색(`/search`): 제목·본문 평문 부분 일치(`pg_trgm`), 공개 글만, 교사 전용 박스 내용은 검색되지 않는다.
+- Vercel 함수 리전은 서울(`icn1`, `vercel.json`). Supabase(서울)와 가까워 응답이 빠르다.
 
 ## 배포 (GitHub → Vercel)
 

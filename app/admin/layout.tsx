@@ -12,9 +12,10 @@ export const metadata: Metadata = {
 const adminNav = [
   { title: "메뉴", href: "/admin/menus" },
   { title: "게시물", href: "/admin/posts" },
+  { title: "설정", href: "/admin/settings" },
 ];
 
-/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물 관리만 있다(휴지통은 게시물 화면에서 들어간다). */
+/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물·설정만 있다(휴지통은 게시물 화면에서 들어간다). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin("/admin");
 
@@ -26,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="hidden rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground sm:inline">
             관리자
           </span>
-          <nav aria-label="관리자 메뉴" className="flex items-center gap-1">
+          <nav aria-label="관리자 메뉴" className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {adminNav.map((item) => (
               <Link
                 key={item.href}
