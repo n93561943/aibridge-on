@@ -215,7 +215,7 @@ test.describe("게시물이 있는 메뉴 삭제", () => {
     if (admin) await deleteTestUser(admin.id);
   });
 
-  test("관리자 화면에서 삭제하면 게시물 수를 알려 주고 막는다", async ({
+  test("관리자 화면에서 삭제하면 게시물 처리 방법을 묻고, 취소하면 그대로 둔다", async ({
     page,
     context,
     baseURL,
@@ -225,9 +225,10 @@ test.describe("게시물이 있는 메뉴 삭제", () => {
     const title = `글있는${prefix.slice(-4)}`;
     await page.getByRole("button", { name: `삭제: ${title}` }).click();
     await page.getByRole("button", { name: "삭제", exact: true }).click();
-    await expect(
-      page.getByRole("status").filter({ hasText: "게시물이 1개 있습니다" }),
-    ).toBeVisible();
+    // 바로 지우지 않고 게시물 처리 방법을 묻는다. 취소하면 메뉴는 그대로다.
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("게시물이 1개 있습니다")).toBeVisible();
+    await dialog.getByRole("button", { name: "취소" }).click();
     const { data } = await adminClient().from("menus").select("id").eq("id", menuId);
     expect(data).toHaveLength(1);
   });

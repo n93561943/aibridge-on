@@ -3,64 +3,133 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/current-user";
+import { getAdminMenuTree } from "@/lib/menus/queries";
 import { createClient } from "@/lib/supabase/server";
+
+import { type PostMenuOption, PostsManager, type PostRow } from "./posts-manager";
 
 export const metadata: Metadata = { title: "게시물" };
 
-// 목록 필터·검색·일괄 이동·휴지통은 P3-3에서 채운다.
-export default async function AdminPostsPage() {
+type SearchParams = { menu?: string; status?: string; q?: string };
+
+/** ilike 패턴에서 특수 문자(%, _, \)를 글자 그대로 찾게 한다. */
+function escapeLike(value: string) {
+  return value.replace(/[%_\\]/g, (m) => `\\${m}`);
+}
+
+export default async function AdminPostsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireAdmin("/admin/posts");
-  const supabase = await createClient();
-  const { data: posts } = await supabase
+  const params = await searchParams;
+  const [tree, supabase] = await Promise.all([getAdminMenuTree(), createClient()]);
+
+  // 게시물을 담을 수 있는 메뉴(게시글·게시판). 하위 메뉴는 "상위 › 하위"로 보여 준다.
+  const menus: PostMenuOption[] = tree.flatMap((node) =>
+    [node, ...node.children]
+      .filter((m) => m.type === "series" || m.type === "board")
+      .map((m) => ({
+        id: m.id,
+        type: m.type as "series" | "board",
+        label: m.parent_id ? `${node.title} › ${m.title}` : m.title,
+      })),
+  );
+
+  const menuId = menus.some((m) => m.id === params.menu) ? params.menu : undefined;
+  const status =
+    params.status === "draft" || params.status === "published" ? params.status : undefined;
+  const q = params.q?.trim().slice(0, 100) || undefined;
+
+  let query = supabase
     .from("posts")
-    .select("id, title, lesson_no, status, draft_saved_at, updated_at, menus(title)")
+    .select("id, title, lesson_no, status, draft_saved_at, updated_at, menu_id")
     .is("deleted_at", null)
-    .order("updated_at", { ascending: false })
-    .limit(100);
+    .limit(300);
+  if (menuId) query = query.eq("menu_id", menuId).order("sort_order");
+  else query = query.order("updated_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+  if (q) query = query.ilike("title", `%${escapeLike(q)}%`);
+  const { data } = await query;
+
+  const posts: PostRow[] = (data ?? []).map((p) => ({
+    id: p.id,
+    title: p.title,
+    lessonNo: p.lesson_no,
+    status: p.status === "published" ? "published" : "draft",
+    editing: p.draft_saved_at !== null,
+    menuId: p.menu_id,
+  }));
 
   return (
     <div className="container-site flex flex-col gap-6 py-8">
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">게시물</h1>
+        <Link
+          href="/admin/trash"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          휴지통
+        </Link>
         <Button asChild className="ml-auto h-10">
-          <Link href="/admin/posts/new">새 게시물</Link>
+          <Link href={menuId ? `/admin/posts/new?menu=${menuId}` : "/admin/posts/new"}>
+            새 게시물
+          </Link>
         </Button>
       </header>
-      {!posts?.length ? (
-        <p className="rounded-xl border border-dashed bg-background p-8 text-center text-muted-foreground">
-          아직 게시물이 없습니다.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {posts.map((post) => (
-            <li key={post.id}>
-              <Link
-                href={`/admin/posts/${post.id}`}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border bg-background p-3 hover:bg-muted/50"
-              >
-                <span className="min-w-0 flex-1 font-medium break-keep">
-                  {post.lesson_no !== null && (
-                    <span className="mr-1 text-muted-foreground">{post.lesson_no}차시</span>
-                  )}
-                  {post.title}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {(post.menus as { title: string } | null)?.title ?? "메뉴 없음"}
-                </span>
-                <span
-                  className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${post.status === "published" ? "bg-emerald-100 text-emerald-900" : "bg-muted text-muted-foreground"}`}
-                >
-                  {post.status === "published"
-                    ? post.draft_saved_at
-                      ? "공개 · 수정 중"
-                      : "공개"
-                    : "초안"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+
+      <form
+        method="get"
+        className="flex flex-wrap items-end gap-2 rounded-xl border bg-background p-3"
+      >
+        <label className="flex min-w-40 flex-1 flex-col gap-1 text-sm">
+          메뉴
+          <select
+            name="menu"
+            defaultValue={menuId ?? ""}
+            className="h-10 rounded-lg border bg-background px-2 text-base md:text-sm"
+          >
+            <option value="">전체</option>
+            {menus.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-28 flex-col gap-1 text-sm">
+          상태
+          <select
+            name="status"
+            defaultValue={status ?? ""}
+            className="h-10 rounded-lg border bg-background px-2 text-base md:text-sm"
+          >
+            <option value="">전체</option>
+            <option value="published">공개</option>
+            <option value="draft">초안</option>
+          </select>
+        </label>
+        <label className="flex min-w-40 flex-[2] flex-col gap-1 text-sm">
+          제목 검색
+          <input
+            type="search"
+            name="q"
+            defaultValue={q ?? ""}
+            maxLength={100}
+            className="h-10 rounded-lg border bg-background px-3 text-base md:text-sm"
+          />
+        </label>
+        <Button type="submit" variant="outline" className="h-10">
+          찾기
+        </Button>
+      </form>
+
+      <PostsManager
+        posts={posts}
+        menus={menus}
+        reorderMenuId={menuId && !status && !q ? menuId : null}
+      />
     </div>
   );
 }

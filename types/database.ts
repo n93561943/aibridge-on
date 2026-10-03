@@ -438,6 +438,10 @@ export type Database = {
         Args: { p_ids: string[]; p_parent_id?: string }
         Returns: undefined
       }
+      reorder_posts: {
+        Args: { p_ids: string[]; p_menu_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

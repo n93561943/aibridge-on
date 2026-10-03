@@ -37,25 +37,38 @@ export async function purgeExpiredTrash(
     if (!posts.length) return result;
 
     const ids = posts.map((p) => p.id);
-    const { data: files, error: filesError } = await db
-      .from("attachments")
-      .select("storage_path")
-      .in("post_id", ids);
-    if (filesError) throw new Error(`첨부 조회 실패: ${filesError.message}`);
-
-    const paths = files.map((f) => f.storage_path);
-    for (let i = 0; i < paths.length; i += BATCH) {
-      const { error: removeError } = await db.storage
-        .from(POST_FILES_BUCKET)
-        .remove(paths.slice(i, i + BATCH));
-      if (removeError) throw new Error(`파일 삭제 실패: ${removeError.message}`);
-    }
-
-    const { error: deleteError } = await db.from("posts").delete().in("id", ids);
-    if (deleteError) throw new Error(`게시물 삭제 실패: ${deleteError.message}`);
-
+    const files = await deletePostsWithFiles(db, ids);
     result.posts += ids.length;
-    result.files += paths.length;
+    result.files += files;
     if (ids.length < BATCH) return result;
   }
+}
+
+/**
+ * 게시물을 영구 삭제한다: Storage 파일을 먼저 지우고 DB 행을 지운다(이력·첨부 행은 cascade).
+ * 파일 삭제가 실패하면 게시물을 지우지 않고 오류를 낸다. 지운 파일 수를 돌려준다.
+ * db는 service role 클라이언트(파일 삭제에 필요). 호출 전에 관리자 권한을 확인한다.
+ */
+export async function deletePostsWithFiles(
+  db: SupabaseClient<Database>,
+  ids: string[],
+): Promise<number> {
+  if (!ids.length) return 0;
+  const { data: files, error: filesError } = await db
+    .from("attachments")
+    .select("storage_path")
+    .in("post_id", ids);
+  if (filesError) throw new Error(`첨부 조회 실패: ${filesError.message}`);
+
+  const paths = files.map((f) => f.storage_path);
+  for (let i = 0; i < paths.length; i += BATCH) {
+    const { error: removeError } = await db.storage
+      .from(POST_FILES_BUCKET)
+      .remove(paths.slice(i, i + BATCH));
+    if (removeError) throw new Error(`파일 삭제 실패: ${removeError.message}`);
+  }
+
+  const { error: deleteError } = await db.from("posts").delete().in("id", ids);
+  if (deleteError) throw new Error(`게시물 삭제 실패: ${deleteError.message}`);
+  return paths.length;
 }

@@ -14,7 +14,7 @@ const adminNav = [
   { title: "게시물", href: "/admin/posts" },
 ];
 
-/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물 관리만 있다. */
+/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물 관리만 있다(휴지통은 게시물 화면에서 들어간다). */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin("/admin");
 
@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container-site flex h-(--header-height) items-center gap-3">
           <Logo />
-          <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+          <span className="hidden rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground sm:inline">
             관리자
           </span>
           <nav aria-label="관리자 메뉴" className="flex items-center gap-1">

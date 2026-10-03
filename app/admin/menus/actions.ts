@@ -9,6 +9,8 @@ import { MENUS_CACHE_TAG } from "@/lib/menus/queries";
 import { menuInputSchema } from "@/lib/menus/schema";
 import { createClient } from "@/lib/supabase/server";
 
+import { movePosts, trashPosts } from "../posts/manage-actions";
+
 export type MenuFormState = {
   ok?: boolean;
   message?: string;
@@ -145,11 +147,19 @@ export async function setMenuActive(id: string, isActive: boolean): Promise<Menu
   };
 }
 
+export type DeleteMenuPostAction = { mode: "move"; targetMenuId: string } | { mode: "trash" };
+export type DeleteMenuResult = MenuActionResult & { postCount?: number };
+
 /**
- * 메뉴 삭제. 하위 메뉴가 있으면 막는다.
- * 게시물이 있는 메뉴의 처리(다른 메뉴로 옮기기·함께 휴지통)는 posts가 생기는 P3에서 추가한다.
+ * 메뉴 삭제(F-04). 하위 메뉴가 있으면 막는다.
+ * 게시물이 있으면 postAction 없이 부르면 개수만 알려 주고, 관리자가 고른 방법으로 처리한 뒤 삭제한다:
+ * - move: 다른 메뉴로 옮긴 뒤 삭제
+ * - trash: 함께 휴지통으로(메뉴가 지워지므로 복구할 때 메뉴를 다시 고른다)
  */
-export async function deleteMenu(id: string): Promise<MenuActionResult> {
+export async function deleteMenu(
+  id: string,
+  postAction?: DeleteMenuPostAction,
+): Promise<DeleteMenuResult> {
   await requireAdmin(ADMIN_PATH);
   if (!idSchema.safeParse(id).success) return { ok: false, message: "잘못된 요청입니다." };
 
@@ -162,17 +172,28 @@ export async function deleteMenu(id: string): Promise<MenuActionResult> {
     return { ok: false, message: "하위 메뉴가 있습니다. 하위 메뉴를 먼저 옮기거나 삭제해 주세요." };
   }
 
-  // 게시물을 옮기거나 휴지통으로 보내는 선택지는 게시물 관리(P3-3)에서 추가한다.
-  const { count: postCount } = await supabase
+  const { data: posts } = await supabase
     .from("posts")
-    .select("id", { count: "exact", head: true })
+    .select("id")
     .eq("menu_id", id)
     .is("deleted_at", null);
-  if (postCount) {
-    return {
-      ok: false,
-      message: `게시물이 ${postCount}개 있습니다. 게시물을 다른 메뉴로 옮기거나 휴지통으로 보낸 뒤 삭제해 주세요.`,
-    };
+  const postIds = (posts ?? []).map((p) => p.id);
+  if (postIds.length) {
+    if (!postAction) {
+      return {
+        ok: false,
+        postCount: postIds.length,
+        message: `게시물이 ${postIds.length}개 있습니다. 게시물을 어떻게 할지 골라 주세요.`,
+      };
+    }
+    if (postAction.mode === "move" && postAction.targetMenuId === id) {
+      return { ok: false, message: "삭제할 메뉴가 아닌 다른 메뉴를 골라 주세요." };
+    }
+    const handled =
+      postAction.mode === "move"
+        ? await movePosts(postIds, postAction.targetMenuId)
+        : await trashPosts(postIds);
+    if (!handled.ok) return { ok: false, message: handled.message };
   }
 
   const { data, error } = await supabase.from("menus").delete().eq("id", id).select("title");
@@ -180,7 +201,12 @@ export async function deleteMenu(id: string): Promise<MenuActionResult> {
   if (!data?.length) return { ok: false, message: "메뉴를 찾을 수 없습니다. 새로고침해 주세요." };
 
   revalidateMenus();
-  return { ok: true, message: `'${data[0].title}' 메뉴를 삭제했습니다.` };
+  const postNote = postIds.length
+    ? postAction?.mode === "move"
+      ? ` 게시물 ${postIds.length}개를 옮겼습니다.`
+      : ` 게시물 ${postIds.length}개는 휴지통에 있습니다.`
+    : "";
+  return { ok: true, message: `'${data[0].title}' 메뉴를 삭제했습니다.${postNote}` };
 }
 
 const reorderSchema = z.object({

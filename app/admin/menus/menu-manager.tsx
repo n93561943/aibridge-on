@@ -42,6 +42,7 @@ import { type MenuNode, menuPath, moveSibling, siblingsOf } from "@/lib/menus/tr
 import { cn } from "@/lib/utils";
 
 import { deleteMenu, type MenuActionResult, reorderMenus, setMenuActive } from "./actions";
+import { DeleteMenuDialog } from "./delete-menu-dialog";
 import { MenuForm } from "./menu-form";
 
 type FormTarget = { mode: "create"; parentId: string | null } | { mode: "edit"; menu: MenuNode };
@@ -57,6 +58,19 @@ export function MenuManager({ tree: initialTree }: { tree: MenuNode[] }) {
   useEffect(() => setTree(initialTree), [initialTree]);
 
   const groups = tree.filter((n) => n.type === "group");
+  // 게시물이 있는 메뉴를 지울 때 처리 방법을 고르는 대화상자
+  const [deleteTarget, setDeleteTarget] = useState<{ menu: MenuNode; postCount: number } | null>(
+    null,
+  );
+
+  const requestDelete = useCallback((menu: MenuNode) => {
+    startTransition(async () => {
+      const result = await deleteMenu(menu.id);
+      if (!result.ok && result.postCount)
+        return setDeleteTarget({ menu, postCount: result.postCount });
+      setNotice({ ok: result.ok, text: result.message ?? "" });
+    });
+  }, []);
 
   const run = useCallback((task: () => Promise<MenuActionResult>, rollback?: () => void) => {
     startTransition(async () => {
@@ -133,7 +147,7 @@ export function MenuManager({ tree: initialTree }: { tree: MenuNode[] }) {
               onMove={(to) => reorder(null, index, to)}
               onEdit={() => setFormTarget({ mode: "edit", menu: node })}
               onToggle={() => run(() => setMenuActive(node.id, !node.is_active))}
-              onDelete={() => run(() => deleteMenu(node.id))}
+              onDelete={() => requestDelete(node)}
             >
               {node.type === "group" && (
                 <div className="mt-3 flex flex-col gap-2 border-l-2 pl-3 sm:ml-6">
@@ -152,7 +166,7 @@ export function MenuManager({ tree: initialTree }: { tree: MenuNode[] }) {
                           onMove={(to) => reorder(node.id, childIndex, to)}
                           onEdit={() => setFormTarget({ mode: "edit", menu: child })}
                           onToggle={() => run(() => setMenuActive(child.id, !child.is_active))}
-                          onDelete={() => run(() => deleteMenu(child.id))}
+                          onDelete={() => requestDelete(child)}
                         />
                       )}
                     />
@@ -175,6 +189,16 @@ export function MenuManager({ tree: initialTree }: { tree: MenuNode[] }) {
           )}
         />
       )}
+
+      <DeleteMenuDialog
+        target={deleteTarget}
+        menus={tree.flatMap((n) => [n, ...n.children])}
+        onClose={() => setDeleteTarget(null)}
+        onDone={(message) => {
+          setDeleteTarget(null);
+          setNotice({ ok: true, text: message });
+        }}
+      />
 
       <Sheet open={formTarget !== null} onOpenChange={(open) => !open && setFormTarget(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-md">
