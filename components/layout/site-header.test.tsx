@@ -127,4 +127,9 @@ describe("SiteHeader", () => {
     await userEvent.click(screen.getByRole("button", { name: "내 계정: 선생" }));
     expect(screen.queryByRole("menuitem", { name: "관리자" })).not.toBeInTheDocument();
   });
+
+  it("검색 링크가 있다", () => {
+    render(<SiteHeader items={[]} />);
+    expect(screen.getByRole("link", { name: "검색" })).toHaveAttribute("href", "/search");
+  });
 });

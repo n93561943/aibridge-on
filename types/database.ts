@@ -460,6 +460,20 @@ export type Database = {
         Args: { p_ids: string[]; p_menu_id: string }
         Returns: undefined
       }
+      search_posts: {
+        Args: { p_limit?: number; p_menu_id?: string; p_query: string }
+        Returns: {
+          id: string
+          lesson_no: number
+          menu_id: string
+          published_at: string
+          slug: string
+          snippet: string
+          summary: string
+          title: string
+          title_match: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,3 +1,4 @@
+import { SearchIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,11 @@ export function SiteHeader({
           )}
         </nav>
         <div className="ml-auto flex items-center gap-1">
+          <Button asChild variant="ghost" size="icon" className="size-10">
+            <Link href="/search" aria-label="검색">
+              <SearchIcon />
+            </Link>
+          </Button>
           {viewer ? (
             <UserMenu viewer={viewer} />
           ) : (
