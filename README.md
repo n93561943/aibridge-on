@@ -151,6 +151,9 @@ sudo npx playwright install-deps chromium   # 브라우저 실행용 시스템 �
 - **공개 글 수정**: 공개된 글을 고치면 `draft_title`·`draft_content`에만 저장되고, "변경 사항 공개"를 눌러야 사이트에 반영된다.
 - **휴지통 자동 삭제**: Vercel Cron이 매일 03:00(KST) `/api/cron/purge-trash`를 호출해 30일 지난 글과 파일을 지운다. Vercel 환경변수에 `CRON_SECRET`(16자 이상 무작위 값, 예: `openssl rand -hex 32`)을 넣어야 동작한다.
 - 게시물이 있는 메뉴는 삭제할 수 없다(DB 제약 + 관리자 화면 안내).
+- **에디터**(`/admin/posts/[id]`): BlockNote 0.51.4(Mantine UI). 0.52부터는 협업용 선택 의존성(yjs v14 rc) 때문에 npm 설치가 실패해 버전을 고정했다. 블록 종류를 바꾸면 `components/editor/schema.ts`와 `lib/posts/content.ts`의 `ALLOWED_BLOCK_TYPES`를 함께 고친다.
+  - 입력이 멈추고 3초 뒤 자동 저장, Ctrl/⌘+S로 바로 저장. 이력은 직접 저장·공개·복원 때와 자동 저장 10분마다 남는다.
+  - 파일은 서버가 발급한 서명 URL로 브라우저가 Storage에 바로 올리고(Vercel 요청 크기 제한 회피), 서버가 실제 크기·형식을 다시 확인한 뒤 `attachments`에 기록한다.
 
 ## 배포 (GitHub → Vercel)
 

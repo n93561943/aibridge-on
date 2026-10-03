@@ -1,0 +1,7 @@
+/* BlockNote 에디터를 사이트 글꼴(Pretendard)에 맞춘다. */
+.post-editor.bn-container {
+  --bn-font-family: var(--font-pretendard), system-ui, sans-serif;
+}
+.post-editor .bn-editor {
+  word-break: keep-all;
+}

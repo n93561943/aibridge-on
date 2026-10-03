@@ -9,9 +9,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const adminNav = [{ title: "메뉴 관리", href: "/admin/menus" }];
+const adminNav = [
+  { title: "메뉴", href: "/admin/menus" },
+  { title: "게시물", href: "/admin/posts" },
+];
 
-/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴 관리만 있다. */
+/** 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물 관리만 있다. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin("/admin");
 
