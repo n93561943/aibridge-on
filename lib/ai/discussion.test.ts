@@ -330,6 +330,7 @@ describe("구성 요소", () => {
       "<lesson>",
       "refused",
       "create_discussion_topics",
+      "title을 그대로 되묻지 않습니다",
     ]) {
       expect(DISCUSSION_SYSTEM_PROMPT).toContain(phrase);
     }

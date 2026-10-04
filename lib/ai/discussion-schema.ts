@@ -83,7 +83,9 @@ export const discussionTool = {
             context: str("배경 설명 2~3문장. 차시 내용과 연결"),
             pro: str("찬성(또는 관점 A) 근거 1~2문장"),
             con: str("반대(또는 관점 B) 근거 1~2문장"),
-            question: str("학생에게 던질 생각 질문 한 문장"),
+            question: str(
+              "학생에게 던질 생각 질문 한 문장. title을 그대로 되묻지 않고 경험·근거·관점을 넓히는 질문",
+            ),
             difficulty: { type: "string", enum: [...DIFFICULTIES] },
           },
           required: ["title", "context", "pro", "con", "question", "difficulty"],
