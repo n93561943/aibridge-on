@@ -99,6 +99,25 @@ describe("PostContent", () => {
     );
   });
 
+  it("이미지 주소 제한을 주면 그 주소로 시작하는 이미지만 그린다(게시판)", () => {
+    const prefix = "https://abc.supabase.co/storage/v1/object/public/post-files/";
+    render(
+      <PostContent
+        blocks={[
+          block("image", { props: { url: "https://evil.test/track.png", caption: "외부" } }),
+          block("image", { props: { url: `${prefix}board/u/a.png`, caption: "내 사진" } }),
+        ]}
+        judgeUrlTemplate={null}
+        imageUrlPrefix={prefix}
+      />,
+    );
+    expect(screen.getAllByRole("img")).toHaveLength(1);
+    expect(screen.getByRole("img", { name: "내 사진" })).toHaveAttribute(
+      "src",
+      `${prefix}board/u/a.png`,
+    );
+  });
+
   it("YouTube는 youtube-nocookie로, 잘못된 영상 ID는 그리지 않는다", () => {
     const { container } = renderBlocks([
       block("youtube", {

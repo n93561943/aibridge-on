@@ -17,7 +17,7 @@ import { CodeBlock } from "./code-block";
 import { alignClass, colorStyle } from "./colors";
 import { Inline, inlinePlainText } from "./inline";
 
-type Ctx = { judgeUrlTemplate: string | null };
+type Ctx = { judgeUrlTemplate: string | null; imageUrlPrefix?: string };
 
 const SAFE_URL = /^https?:\/\//i;
 const LIST_TYPES = new Set(["bulletListItem", "numberedListItem", "checkListItem"]);
@@ -29,13 +29,16 @@ const LIST_TYPES = new Set(["bulletListItem", "numberedListItem", "checkListItem
 export function PostContent({
   blocks,
   judgeUrlTemplate,
+  imageUrlPrefix,
 }: {
   blocks: Block[];
   judgeUrlTemplate: string | null;
+  /** 주면 이 주소로 시작하는 이미지만 그린다(게시판: 사이트 Storage 업로드만, 외부 이미지 차단) */
+  imageUrlPrefix?: string;
 }) {
   return (
     <div className="post-content text-base leading-relaxed break-keep">
-      <Blocks blocks={blocks} ctx={{ judgeUrlTemplate }} />
+      <Blocks blocks={blocks} ctx={{ judgeUrlTemplate, imageUrlPrefix }} />
     </div>
   );
 }
@@ -243,7 +246,7 @@ function BlockView({ block, ctx }: { block: Block; ctx: Ctx }) {
 
     case "image": {
       const url = typeof p.url === "string" && SAFE_URL.test(p.url) ? p.url : null;
-      if (!url) return null;
+      if (!url || (ctx.imageUrlPrefix && !url.startsWith(ctx.imageUrlPrefix))) return null;
       const caption = typeof p.caption === "string" ? p.caption : "";
       const width = Number(p.previewWidth);
       return (

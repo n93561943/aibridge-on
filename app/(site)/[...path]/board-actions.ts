@@ -38,15 +38,20 @@ export type VoteResult =
   { ok: true; score: number; myVote: number } | { ok: false; message: string };
 
 const voteSchema = z.object({
-  postId: z.uuid(),
+  targetType: z.enum(["post", "comment"]),
+  targetId: z.uuid(),
   value: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
 });
 
 /**
- * 글 추천/비추천/취소. 화면이 "다시 누르면 취소, 반대면 전환"을 계산해 원하는 값을 보낸다.
+ * 글·댓글 추천/비추천/취소. 화면이 "다시 누르면 취소, 반대면 전환"을 계산해 원하는 값을 보낸다.
  * 권한: 화면(비회원 안내) + 여기(활동 회원) + DB(cast_vote: 활동 회원·투표 허용 게시판·공개 글).
  */
-export async function votePost(input: { postId: string; value: number }): Promise<VoteResult> {
+export async function castVote(input: {
+  targetType: "post" | "comment";
+  targetId: string;
+  value: number;
+}): Promise<VoteResult> {
   const parsed = voteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "잘못된 요청입니다." };
 
@@ -59,8 +64,8 @@ export async function votePost(input: { postId: string; value: number }): Promis
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("cast_vote", {
-    p_target_type: "post",
-    p_target_id: parsed.data.postId,
+    p_target_type: parsed.data.targetType,
+    p_target_id: parsed.data.targetId,
     p_value: parsed.data.value,
   });
   const row = data?.[0];
@@ -69,7 +74,7 @@ export async function votePost(input: { postId: string; value: number }): Promis
       ok: false,
       message:
         error?.code === "P0002"
-          ? "투표할 수 없는 글입니다. 새로고침해 주세요."
+          ? "투표할 수 없는 글이나 댓글입니다. 새로고침해 주세요."
           : "투표하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     };
   }

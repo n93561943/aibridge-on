@@ -1,19 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowBigDown, ArrowBigUp, Link2, MessageSquare } from "lucide-react";
-import { useState, useTransition } from "react";
+import { MessageSquare } from "lucide-react";
 
 import type { BoardPostCard } from "@/lib/board/feed";
-import { formatCompact, formatRelativeTime, nextVote } from "@/lib/board/format";
+import { formatCompact, formatRelativeTime } from "@/lib/board/format";
 import { cn } from "@/lib/utils";
 
-import { votePost } from "./board-actions";
+import { actionPillClass, type FeedNotice, ShareButton, VoteButtons } from "./vote-buttons";
 
-export type FeedNotice = { text: string; tone?: "error"; loginHref?: string };
-
-const actionClass =
-  "inline-flex h-8 items-center gap-1.5 rounded-full bg-muted/60 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+export type { FeedNotice };
 
 /** 게시판 글 카드(F-08): 메뉴·작성자·시간 / 제목 / 미리보기·썸네일 / 투표·댓글·공유 */
 export function PostCard({
@@ -35,43 +31,7 @@ export function PostCard({
   now: number;
   onNotice: (notice: FeedNotice | null) => void;
 }) {
-  const [vote, setVote] = useState({ score: post.score, myVote: post.myVote });
-  const [pending, startVote] = useTransition();
   const titleId = `post-${post.id}-title`;
-
-  function press(pressed: 1 | -1) {
-    if (!canVote) {
-      onNotice({ text: "투표하려면 로그인해 주세요.", loginHref });
-      return;
-    }
-    const before = vote;
-    const value = nextVote(before.myVote, pressed);
-    // 낙관적 업데이트: 화면에 먼저 반영하고 서버 결과로 맞춘다.
-    setVote({ score: before.score - before.myVote + value, myVote: value });
-    onNotice(null);
-    startVote(async () => {
-      try {
-        const result = await votePost({ postId: post.id, value });
-        if (result.ok) setVote({ score: result.score, myVote: result.myVote });
-        else {
-          setVote(before);
-          onNotice({ text: result.message, tone: "error" });
-        }
-      } catch {
-        setVote(before);
-        onNotice({ text: "투표하지 못했습니다. 잠시 후 다시 시도해 주세요.", tone: "error" });
-      }
-    });
-  }
-
-  async function share() {
-    try {
-      await navigator.clipboard.writeText(post.shareUrl);
-      onNotice({ text: "링크를 복사했습니다." });
-    } catch {
-      onNotice({ text: "링크를 복사하지 못했습니다.", tone: "error" });
-    }
-  }
 
   return (
     <article
@@ -120,55 +80,27 @@ export function PostCard({
 
       <div className="relative z-10 flex flex-wrap items-center gap-2 pt-1">
         {allowVotes && (
-          <div
-            role="group"
-            aria-label="투표"
-            className={cn(
-              "inline-flex h-8 items-center rounded-full bg-muted/60 text-xs font-semibold",
-              vote.myVote === 1 && "text-orange-600 dark:text-orange-400",
-              vote.myVote === -1 && "text-indigo-600 dark:text-indigo-400",
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => press(1)}
-              disabled={pending}
-              aria-pressed={vote.myVote === 1}
-              aria-label="추천"
-              className="flex size-8 items-center justify-center rounded-full hover:bg-muted"
-            >
-              <ArrowBigUp className={cn("size-5", vote.myVote === 1 && "fill-current")} />
-            </button>
-            <span data-testid="score" className="min-w-6 text-center tabular-nums">
-              <span className="sr-only">점수 </span>
-              {formatCompact(vote.score)}
-            </span>
-            <button
-              type="button"
-              onClick={() => press(-1)}
-              disabled={pending}
-              aria-pressed={vote.myVote === -1}
-              aria-label="비추천"
-              className="flex size-8 items-center justify-center rounded-full hover:bg-muted"
-            >
-              <ArrowBigDown className={cn("size-5", vote.myVote === -1 && "fill-current")} />
-            </button>
-          </div>
+          <VoteButtons
+            targetType="post"
+            targetId={post.id}
+            score={post.score}
+            myVote={post.myVote}
+            canVote={canVote}
+            loginHref={loginHref}
+            onNotice={onNotice}
+          />
         )}
         {allowComments && (
           <Link
             href={`${post.href}#comments`}
-            className={actionClass}
+            className={actionPillClass}
             aria-label={`댓글 ${post.commentCount}개`}
           >
             <MessageSquare className="size-4" aria-hidden />
             <span className="tabular-nums">{formatCompact(post.commentCount)}</span>
           </Link>
         )}
-        <button type="button" onClick={share} className={actionClass}>
-          <Link2 className="size-4" aria-hidden />
-          공유
-        </button>
+        <ShareButton url={post.shareUrl} onNotice={onNotice} />
       </div>
     </article>
   );

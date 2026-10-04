@@ -3,6 +3,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { getBoardFeedPage, getBoardViewer } from "@/lib/board/feed";
 import { parseFeedOrder } from "@/lib/board/format";
+import {
+  boardImagePrefix,
+  getBoardComments,
+  getBoardDetailViewer,
+  getBoardPost,
+} from "@/lib/board/post";
 import { getActiveMember, getOwnBoardPost, getWriteAccess } from "@/lib/board/write";
 import { getPublicMenuTree } from "@/lib/menus/queries";
 import { menuHref, menuPath, resolveMenuPath } from "@/lib/menus/tree";
@@ -16,6 +22,7 @@ import {
 import { getOnlineJudgeTemplate } from "@/lib/settings/queries";
 
 import { BoardFeed } from "./board-feed";
+import { BoardPostView } from "./board-post-view";
 import { BoardWritePage } from "./board-write-page";
 import { PostView } from "./post-view";
 import { SeriesList } from "./series-list";
@@ -103,8 +110,24 @@ export default async function MenuOrPostPage({ params, searchParams }: Props) {
         />
       );
     }
-    // 글 상세는 P5-4
-    if (postSlug) notFound();
+    if (postSlug) {
+      const detailViewer = await getBoardDetailViewer();
+      const post = await getBoardPost(menu, parent, postSlug, detailViewer);
+      const imageUrlPrefix = boardImagePrefix();
+      if (!post || !imageUrlPrefix) notFound();
+      const comments = await getBoardComments(post.id, detailViewer);
+      return (
+        <BoardPostView
+          menu={menu}
+          parent={parent}
+          post={post}
+          comments={comments}
+          viewer={detailViewer}
+          imageUrlPrefix={imageUrlPrefix}
+          now={Date.now()}
+        />
+      );
+    }
     const order = parseFeedOrder(sort, t);
     const now = new Date();
     const [page, viewer] = await Promise.all([

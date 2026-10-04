@@ -110,11 +110,20 @@ test.describe("게시판 글쓰기", () => {
       new RegExp(`/post-files/board/${student.id}/`),
     );
 
+    // 저장하면 글 상세로 간다
     await page.getByRole("button", { name: "게시" }).click();
-    await expect(page).toHaveURL(new RegExp(`/${slug}\\?sort=new$`));
-    const card = page.getByRole("article", { name: "첫 글입니다" });
-    await expect(card).toContainText("안녕하세요 굵게 인사");
-    await expect(card.locator("img")).toHaveAttribute(
+    await expect(page).toHaveURL(new RegExp(`/${slug}/post-[0-9a-f]{6}$`));
+    const detail = page.getByRole("article", { name: "첫 글입니다" });
+    await expect(detail.getByRole("heading", { level: 1 })).toHaveText("첫 글입니다");
+    await expect(detail).toContainText("안녕하세요 굵게 인사");
+    await expect(detail.locator("img")).toHaveAttribute(
+      "src",
+      new RegExp(`/post-files/board/${student.id}/`),
+    );
+
+    // 피드 카드에도 썸네일과 함께 나온다
+    await page.goto(`/${slug}?sort=new`);
+    await expect(page.getByRole("article", { name: "첫 글입니다" }).locator("img")).toHaveAttribute(
       "src",
       new RegExp(`/post-files/board/${student.id}/`),
     );
@@ -182,8 +191,8 @@ test.describe("게시판 글쓰기", () => {
     await expect(page.locator(".bn-editor")).toContainText("원래 본문");
     await page.getByLabel("제목").fill("고친 글");
     await page.getByRole("button", { name: "수정" }).click();
-    await expect(page).toHaveURL(new RegExp(`/${slug}\\?sort=new$`));
-    await expect(page.getByRole("article", { name: "고친 글" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/${slug}/${postSlug}$`));
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("고친 글");
 
     // 다른 회원
     const context = await browser.newContext({ baseURL });

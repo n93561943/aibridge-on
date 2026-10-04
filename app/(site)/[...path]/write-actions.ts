@@ -6,7 +6,6 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { cleanBoardContent, boardTitleSchema, uploadUrlPrefix } from "@/lib/board/content";
-import { feedOrderHref } from "@/lib/board/format";
 import {
   findActiveBoard,
   getActiveMember,
@@ -14,7 +13,7 @@ import {
   writeAccessMessages,
 } from "@/lib/board/write";
 import { getSupabasePublicConfig } from "@/lib/env";
-import { menuPath } from "@/lib/menus/tree";
+import { menuPath, postPath } from "@/lib/menus/tree";
 import {
   isImageMime,
   POST_FILES_BUCKET,
@@ -207,9 +206,10 @@ export async function createBoardPost(input: z.input<typeof createSchema>): Prom
   const supabase = await createClient();
   // 주소(slug)가 우연히 겹치면 한 번 더 시도한다.
   for (let attempt = 0; attempt < 2; attempt++) {
+    const slug = newPostSlug();
     const { error } = await supabase.rpc("create_board_post", {
       p_menu_id: board.menu.id,
-      p_slug: newPostSlug(),
+      p_slug: slug,
       p_title: post.title,
       p_content: post.content,
       p_content_text: post.contentText,
@@ -217,11 +217,7 @@ export async function createBoardPost(input: z.input<typeof createSchema>): Prom
     });
     if (!error) {
       revalidateTag(POSTS_CACHE_TAG);
-      // 글 상세(P5-4) 전까지는 최신순 피드로 보낸다.
-      return {
-        ok: true,
-        href: feedOrderHref(menuPath(board.menu, board.parent)!, { sort: "new", period: "week" }),
-      };
+      return { ok: true, href: postPath(board.menu, board.parent, slug) };
     }
     if (error.code !== "23505") return { ok: false, message: saveErrorMessage(error) };
   }
@@ -263,8 +259,16 @@ export async function updateBoardPost(input: z.input<typeof updateSchema>): Prom
     };
   }
   revalidateTag(POSTS_CACHE_TAG);
+  // 본인 글 주소(slug)는 RLS("본인 게시물 조회")로 읽을 수 있다.
+  const { data: saved } = await supabase
+    .from("posts")
+    .select("slug")
+    .eq("id", parsed.data.postId)
+    .single();
   return {
     ok: true,
-    href: feedOrderHref(menuPath(board.menu, board.parent)!, { sort: "new", period: "week" }),
+    href: saved
+      ? postPath(board.menu, board.parent, saved.slug)
+      : menuPath(board.menu, board.parent)!,
   };
 }
