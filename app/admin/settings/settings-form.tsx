@@ -6,14 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import type { AiSettings } from "@/lib/ai/settings";
+
 import { saveSettings, type SettingsState } from "./actions";
 
 export function SettingsForm({
   homeHeroText,
   onlineJudgeUrl,
   boardUploadLimit,
+  ai,
   defaultTagline,
 }: {
+  ai: AiSettings;
   homeHeroText: string;
   onlineJudgeUrl: string;
   boardUploadLimit: number;
@@ -92,6 +96,52 @@ export function SettingsForm({
         </p>
         <p id="boardUploadLimit-error" className="text-sm text-destructive empty:hidden">
           {errors.boardUploadLimit}
+        </p>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3 rounded-xl border bg-background p-4">
+        <legend className="px-1 font-semibold">AI 토론 주제</legend>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" name="aiEnabled" defaultChecked={ai.enabled} />
+          AI 토론 주제 생성 켜기
+        </label>
+        <p className="text-xs text-muted-foreground">
+          끄면 교사·관리자 모두 새로 생성할 수 없습니다(이미 공개한 대표 주제는 그대로 보입니다).
+          Anthropic 콘솔에서도 월 사용 한도를 설정해 두세요(이중 안전장치).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ["aiMonthlyBudgetKrw", "월 예산(원)", ai.monthlyBudgetKrw, 0, 10_000_000],
+              ["usdKrwRate", "환율(원/달러)", ai.usdKrwRate, 100, 10_000],
+              ["aiDailyLimitTeacher", "교사 일일 한도(회)", ai.dailyLimitTeacher, 0, 1000],
+              ["aiDailyLimitAdmin", "관리자 일일 한도(회)", ai.dailyLimitAdmin, 0, 1000],
+            ] as const
+          ).map(([name, label, value, min, max]) => (
+            <div key={name} className="flex flex-col gap-1">
+              <Label htmlFor={name}>{label}</Label>
+              <Input
+                id={name}
+                name={name}
+                type="number"
+                inputMode="numeric"
+                min={min}
+                max={max}
+                step={1}
+                required
+                defaultValue={value}
+                aria-invalid={!!errors[name] || undefined}
+                aria-describedby={`${name}-error`}
+              />
+              <p id={`${name}-error`} className="text-sm text-destructive empty:hidden">
+                {errors[name]}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          이번 달 누적 비용이 월 예산에 닿으면 자동으로 멈춥니다. 비용은 모델 단가(환경변수)와 위
+          환율로 계산합니다.
         </p>
       </fieldset>
 

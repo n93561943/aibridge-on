@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AI_SETTING_KEYS, type AiSettings, parseAiSettings } from "@/lib/ai/settings";
 import { createClient } from "@/lib/supabase/server";
 
 import { ONLINE_JUDGE_SETTING_KEY } from "./online-judge";
@@ -39,4 +40,14 @@ export async function getBoardUploadDailyLimit(): Promise<number | null> {
     .eq("key", BOARD_UPLOAD_LIMIT_SETTING_KEY)
     .maybeSingle();
   return typeof data?.value === "number" ? data.value : null;
+}
+
+/** AI 토론 주제 설정(P7). 관리자만 읽을 수 있다(설정 화면용, RLS "관리자 설정 조회"). */
+export async function getAiSettings(): Promise<AiSettings> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("key, value")
+    .in("key", Object.values(AI_SETTING_KEYS));
+  return parseAiSettings(data ?? []);
 }

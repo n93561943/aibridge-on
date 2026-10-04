@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
+import { aiSettingsFormSchema, aiSettingsRows } from "@/lib/ai/settings";
 import { requireAdmin } from "@/lib/auth/current-user";
 import { POSTS_CACHE_TAG } from "@/lib/posts/public";
 import { ONLINE_JUDGE_SETTING_KEY } from "@/lib/settings/online-judge";
@@ -39,9 +40,18 @@ export async function saveSettings(
     onlineJudgeUrl: formData.get("onlineJudgeUrl") ?? "",
     boardUploadLimit: formData.get("boardUploadLimit") || undefined,
   });
-  if (!parsed.success) {
+  const ai = aiSettingsFormSchema.safeParse({
+    aiEnabled: formData.get("aiEnabled"),
+    aiMonthlyBudgetKrw: formData.get("aiMonthlyBudgetKrw") || undefined,
+    usdKrwRate: formData.get("usdKrwRate") || undefined,
+    aiDailyLimitTeacher: formData.get("aiDailyLimitTeacher") || undefined,
+    aiDailyLimitAdmin: formData.get("aiDailyLimitAdmin") || undefined,
+  });
+  if (!parsed.success || !ai.success) {
     const errors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) errors[String(issue.path[0])] ??= issue.message;
+    for (const issue of [...(parsed.error?.issues ?? []), ...(ai.error?.issues ?? [])]) {
+      errors[String(issue.path[0])] ??= issue.message;
+    }
     return { errors };
   }
 
@@ -59,6 +69,8 @@ export async function saveSettings(
     .from("site_settings")
     .upsert({ key: BOARD_UPLOAD_LIMIT_SETTING_KEY, value: parsed.data.boardUploadLimit });
   if (limitError) return { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  const { error: aiError } = await supabase.from("site_settings").upsert(aiSettingsRows(ai.data));
+  if (aiError) return { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
 
   revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");

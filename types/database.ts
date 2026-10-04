@@ -49,6 +49,81 @@ export type Database = {
           },
         ]
       }
+      ai_generations: {
+        Row: {
+          block_id: string
+          cost_krw: number
+          created_at: string
+          error_code: string | null
+          finished_at: string | null
+          id: string
+          input: Json
+          input_tokens: number
+          is_featured: boolean
+          is_saved: boolean
+          model: string | null
+          output: Json | null
+          output_tokens: number
+          post_id: string | null
+          source_hash: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          block_id: string
+          cost_krw?: number
+          created_at?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          input?: Json
+          input_tokens?: number
+          is_featured?: boolean
+          is_saved?: boolean
+          model?: string | null
+          output?: Json | null
+          output_tokens?: number
+          post_id?: string | null
+          source_hash: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          block_id?: string
+          cost_krw?: number
+          created_at?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: string
+          input?: Json
+          input_tokens?: number
+          is_featured?: boolean
+          is_saved?: boolean
+          model?: string | null
+          output?: Json | null
+          output_tokens?: number
+          post_id?: string | null
+          source_hash?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_generations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -621,6 +696,45 @@ export type Database = {
       admin_set_status: {
         Args: { p_status: string; p_user: string }
         Returns: undefined
+      }
+      ai_finish_generation: {
+        Args: {
+          p_cost_krw: number
+          p_error_code: string
+          p_id: string
+          p_input_tokens: number
+          p_model: string
+          p_output: Json
+          p_output_tokens: number
+          p_status: string
+        }
+        Returns: undefined
+      }
+      ai_is_enabled: { Args: never; Returns: boolean }
+      ai_kst_day_start: { Args: never; Returns: string }
+      ai_kst_month_start: { Args: never; Returns: string }
+      ai_month_cost_krw: { Args: never; Returns: number }
+      ai_reserve_generation: {
+        Args: {
+          p_block_id: string
+          p_input: Json
+          p_model: string
+          p_post_id: string
+          p_source_hash: string
+        }
+        Returns: {
+          generation_id: string
+          output: Json
+          status: string
+        }[]
+      }
+      ai_set_featured: {
+        Args: { p_featured: boolean; p_id: string }
+        Returns: undefined
+      }
+      ai_setting_number: {
+        Args: { p_default: number; p_key: string }
+        Returns: number
       }
       board_content_problem: {
         Args: { p_blocks: Json; p_depth?: number; p_uid: string }
