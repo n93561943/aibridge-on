@@ -20,6 +20,7 @@ import { formatRelativeTime } from "@/lib/board/format";
 import { cn } from "@/lib/utils";
 
 import { addComment, deleteComment, editComment } from "./board-post-actions";
+import { ReportButton } from "./report-button";
 import { type FeedNotice, VoteButtons } from "./vote-buttons";
 
 type Ctx = {
@@ -200,6 +201,16 @@ function CommentItem({ node, ctx }: { node: CommentNode; ctx: Ctx }) {
                 <button type="button" className={linkButton} onClick={() => setMode("edit")}>
                   수정
                 </button>
+              )}
+              {!node.isMine && (
+                <ReportButton
+                  targetType="comment"
+                  targetId={node.id}
+                  canReport={ctx.canVote}
+                  loginHref={ctx.loginHref}
+                  onNotice={ctx.onNotice}
+                  className={`${linkButton} inline-flex items-center gap-1`}
+                />
               )}
               {(node.isMine || ctx.isAdmin) && (
                 <button type="button" className={linkButton} onClick={remove} disabled={pending}>

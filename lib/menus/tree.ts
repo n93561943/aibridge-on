@@ -142,3 +142,16 @@ export function resolveMenuPath(tree: MenuNode[], segments: string[]): ResolvedP
 export function postPath(menu: MenuRow, parent: MenuRow | null, postSlug: string): string {
   return `${menuPath(menu, parent) ?? `/${menu.slug}`}/${postSlug}`;
 }
+
+/** 메뉴 id로 트리에서 메뉴와 상위 메뉴를 찾는다. 없으면 null. */
+export function findMenuById(
+  tree: MenuNode[],
+  menuId: string,
+): { menu: MenuNode; parent: MenuNode | null } | null {
+  for (const root of tree) {
+    if (root.id === menuId) return { menu: root, parent: null };
+    const child = root.children.find((c) => c.id === menuId);
+    if (child) return { menu: child, parent: root };
+  }
+  return null;
+}

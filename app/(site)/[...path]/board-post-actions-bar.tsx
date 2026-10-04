@@ -8,6 +8,7 @@ import { useState, useTransition } from "react";
 import { formatCompact } from "@/lib/board/format";
 
 import { setBoardPostPinned, trashBoardPost } from "./board-post-actions";
+import { ReportButton } from "./report-button";
 import { actionPillClass, type FeedNotice, ShareButton, VoteButtons } from "./vote-buttons";
 
 /** 글 상세 하단: 투표·댓글 수·공유 + 작성자(수정·삭제)·관리자(고정·삭제) */
@@ -79,6 +80,16 @@ export function BoardPostActionsBar({
           <span className="tabular-nums">{formatCompact(post.commentCount)}</span>
         </a>
         <ShareButton url={post.shareUrl} onNotice={setNotice} />
+        {!post.isMine && (
+          <ReportButton
+            targetType="post"
+            targetId={post.id}
+            canReport={canVote}
+            loginHref={loginHref}
+            onNotice={setNotice}
+            className={actionPillClass}
+          />
+        )}
 
         {(post.isMine || isAdmin) && (
           <div className="ml-auto flex flex-wrap gap-2">

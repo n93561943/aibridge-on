@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { menuInputSchema, RESERVED_SLUGS } from "./schema";
 import type { MenuRow } from "./schema";
 import {
+  findMenuById,
   buildMenuTree,
   menuHref,
   moveSibling,
@@ -159,6 +160,22 @@ describe("buildMenuTree", () => {
     const r = seedRows();
     const tree = buildMenuTree([r.literacy, r.python, r.aiProg]);
     expect(tree.map((n) => n.slug)).toEqual(["ai-literacy"]);
+  });
+});
+
+describe("findMenuById", () => {
+  it("최상위·하위 메뉴와 그 상위 메뉴를 찾는다", () => {
+    const r = seedRows();
+    const tree = buildMenuTree(Object.values(r));
+    expect(findMenuById(tree, r.literacy.id)).toMatchObject({
+      menu: { slug: "ai-literacy" },
+      parent: null,
+    });
+    expect(findMenuById(tree, r.python.id)).toMatchObject({
+      menu: { slug: "python-basics" },
+      parent: { slug: "ai-coding" },
+    });
+    expect(findMenuById(tree, "없는-id")).toBeNull();
   });
 });
 

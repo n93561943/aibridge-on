@@ -6,6 +6,7 @@ import { requireMember } from "@/lib/auth/current-user";
 import { roleLabels, toUserRole } from "@/lib/auth/roles";
 
 import { NicknameForm, TeacherForm, WithdrawForm } from "./me-forms";
+import { MyBoardActivity } from "./my-board";
 
 export const metadata: Metadata = { title: "내 정보" };
 
@@ -26,7 +27,7 @@ export default async function MePage({
 }: {
   searchParams: Promise<{ notice?: string }>;
 }) {
-  const { profile, email } = await requireMember("/me");
+  const { id, profile, email } = await requireMember("/me");
   const { notice } = await searchParams;
   const teacherStatus = (profile.teacher_status as keyof typeof teacherStatusLabels) ?? "none";
 
@@ -138,6 +139,8 @@ export default async function MePage({
           </CardContent>
         </Card>
       )}
+
+      <MyBoardActivity userId={id} />
 
       <Card>
         <CardHeader>

@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { COMMENT_MAX_LENGTH } from "@/lib/board/comment-tree";
+import { reportInputSchema } from "@/lib/board/report";
 import { findActiveBoard, getActiveMember, writeAccessMessages } from "@/lib/board/write";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { toUserRole } from "@/lib/auth/roles";
@@ -165,5 +166,43 @@ export async function setBoardPostPinned(
     .select("id");
   if (error || !data.length) return { ok: false, message: `바꾸지 못했습니다. ${RETRY}` };
   revalidateTag(POSTS_CACHE_TAG);
+  return { ok: true };
+}
+
+/**
+ * 글·댓글 신고. 권한: 화면(본인 글·댓글엔 버튼 없음) + 여기(활동 회원·본인 것 아님)
+ * + DB(RLS: 활동 회원·열린 게시판 글, 같은 대상 열린 신고는 한 번).
+ */
+export async function reportContent(
+  input: z.input<typeof reportInputSchema>,
+): Promise<ActionResult> {
+  const parsed = reportInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+  const member = await getActiveMember();
+  if (!member.ok) return { ok: false, message: writeAccessMessages[member.reason] };
+  const { targetType, targetId, reason, detail } = parsed.data;
+
+  // 본인 글·댓글은 신고할 수 없다(공개 글·댓글의 작성자 id는 RLS로 읽을 수 있다).
+  const supabase = await createClient();
+  const { data: target } =
+    targetType === "post"
+      ? await supabase.from("posts").select("author_id").eq("id", targetId).maybeSingle()
+      : await supabase.from("comments").select("author_id").eq("id", targetId).maybeSingle();
+  if (!target) return { ok: false, message: "신고할 수 없는 글이나 댓글입니다." };
+  if (target.author_id === member.userId) {
+    return { ok: false, message: "내가 쓴 글이나 댓글은 신고할 수 없습니다." };
+  }
+
+  const { error } = await supabase
+    .from("reports")
+    .insert({ target_type: targetType, target_id: targetId, reason, detail });
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, message: "이미 신고했습니다. 관리자가 확인하고 있습니다." };
+    }
+    if (error.code === "42501") return { ok: false, message: "신고할 수 없는 글이나 댓글입니다." };
+    return { ok: false, message: `신고하지 못했습니다. ${RETRY}` };
+  }
+  revalidatePath("/admin/reports");
   return { ok: true };
 }
