@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/layout/logo";
 import { requireAdmin } from "@/lib/auth/current-user";
+import { countPendingTeachers } from "@/lib/admin/users";
 import { countOpenReportTargets } from "@/lib/board/reports-admin";
 
 export const metadata: Metadata = {
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 const adminNav = [
+  { title: "대시보드", href: "/admin" },
+  { title: "회원", href: "/admin/users" },
   { title: "메뉴", href: "/admin/menus" },
   { title: "게시물", href: "/admin/posts" },
   { title: "신고", href: "/admin/reports" },
@@ -18,12 +21,19 @@ const adminNav = [
 ];
 
 /**
- * 관리자 화면 공통 틀. 대시보드(P6) 전까지는 메뉴·게시물·신고·설정만 있다(휴지통은 게시물 화면에서).
- * 신고 메뉴에는 처리 대기 대상 수를 배지로 보여 준다.
+ * 관리자 화면 공통 틀(휴지통은 게시물 화면에서 들어간다).
+ * 회원 메뉴에는 교사 승인 대기 수, 신고 메뉴에는 처리 대기 대상 수를 배지로 보여 준다.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin("/admin");
-  const openReports = await countOpenReportTargets();
+  const [openReports, pendingTeachers] = await Promise.all([
+    countOpenReportTargets(),
+    countPendingTeachers(),
+  ]);
+  const badges: Record<string, { count: number; label: string }> = {
+    "/admin/users": { count: pendingTeachers, label: "교사 승인 대기" },
+    "/admin/reports": { count: openReports, label: "처리 대기" },
+  };
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/30">
@@ -41,10 +51,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 className="rounded-md px-2 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 {item.title}
-                {item.href === "/admin/reports" && openReports > 0 && (
+                {!!badges[item.href]?.count && (
                   <span className="ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-[11px] font-semibold text-white tabular-nums">
-                    <span className="sr-only">처리 대기 </span>
-                    {openReports}
+                    <span className="sr-only">{badges[item.href].label} </span>
+                    {badges[item.href].count}
                   </span>
                 )}
               </Link>

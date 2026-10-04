@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { roleLabels } from "@/lib/auth/roles";
 
+import { PendingTeachersBadge } from "./pending-teachers-badge";
 import type { HeaderViewer } from "./viewer";
 
 export function UserMenu({ viewer }: { viewer: HeaderViewer }) {
@@ -30,6 +31,9 @@ export function UserMenu({ viewer }: { viewer: HeaderViewer }) {
         >
           <UserIcon />
           <span className="truncate">{name}</span>
+          {!!viewer.pendingTeachers && (
+            <span aria-hidden className="size-2 shrink-0 rounded-full bg-destructive" />
+          )}
           <ChevronDownIcon className="text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
@@ -43,9 +47,10 @@ export function UserMenu({ viewer }: { viewer: HeaderViewer }) {
         </DropdownMenuItem>
         {viewer.role === "admin" && (
           <DropdownMenuItem asChild>
-            <Link href="/admin/menus">
+            <Link href="/admin">
               <SettingsIcon />
               관리자
+              <PendingTeachersBadge count={viewer.pendingTeachers} />
             </Link>
           </DropdownMenuItem>
         )}

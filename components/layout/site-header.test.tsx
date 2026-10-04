@@ -112,10 +112,7 @@ describe("SiteHeader", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "내 계정: 관리" }));
-    expect(screen.getByRole("menuitem", { name: "관리자" })).toHaveAttribute(
-      "href",
-      "/admin/menus",
-    );
+    expect(screen.getByRole("menuitem", { name: "관리자" })).toHaveAttribute("href", "/admin");
     unmount();
 
     render(
@@ -126,6 +123,17 @@ describe("SiteHeader", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "내 계정: 선생" }));
     expect(screen.queryByRole("menuitem", { name: "관리자" })).not.toBeInTheDocument();
+  });
+
+  it("관리자 링크에 교사 승인 대기 수를 배지로 보여 준다", async () => {
+    render(
+      <SiteHeader
+        items={[]}
+        viewer={{ nickname: "관리", role: "admin", pendingGuardian: false, pendingTeachers: 3 }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "내 계정: 관리" }));
+    expect(screen.getByRole("menuitem", { name: /^관리자/ })).toHaveTextContent("교사 승인 대기 3");
   });
 
   it("검색 링크가 있다", () => {

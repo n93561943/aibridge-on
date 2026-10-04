@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { siteConfig } from "@/lib/site";
 
 import type { NavItem } from "./nav-items";
+import { PendingTeachersBadge } from "./pending-teachers-badge";
 import type { HeaderViewer } from "./viewer";
 
 export function MobileNav({ items, viewer }: { items: NavItem[]; viewer: HeaderViewer | null }) {
@@ -51,11 +52,12 @@ export function MobileNav({ items, viewer }: { items: NavItem[]; viewer: HeaderV
               </Link>
               {viewer.role === "admin" && (
                 <Link
-                  href="/admin/menus"
+                  href="/admin"
                   onClick={() => setOpen(false)}
                   className="block rounded-md px-2 py-2 font-medium hover:bg-accent"
                 >
                   관리자
+                  <PendingTeachersBadge count={viewer.pendingTeachers} />
                 </Link>
               )}
               <form action={signOut}>

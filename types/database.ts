@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          detail: Json
+          id: number
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: never
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: never
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
           created_at: string
@@ -566,6 +601,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_log_guardian_resend: {
+        Args: { p_user: string }
+        Returns: undefined
+      }
+      admin_prepare_withdraw: { Args: { p_user: string }; Returns: undefined }
+      admin_review_teachers: {
+        Args: { p_approve: boolean; p_ids: string[]; p_reason?: string }
+        Returns: {
+          email: string
+          id: string
+          nickname: string
+        }[]
+      }
+      admin_set_role: {
+        Args: { p_role: string; p_user: string }
+        Returns: undefined
+      }
+      admin_set_status: {
+        Args: { p_status: string; p_user: string }
+        Returns: undefined
+      }
       board_content_problem: {
         Args: { p_blocks: Json; p_depth?: number; p_uid: string }
         Returns: string
@@ -641,6 +697,7 @@ export type Database = {
           allow_votes: boolean
         }[]
       }
+      other_active_admin_exists: { Args: { p_user: string }; Returns: boolean }
       post_hot_rank: {
         Args: { p_created_at: string; p_score: number }
         Returns: number
@@ -654,6 +711,7 @@ export type Database = {
         Args: { p_ids: string[]; p_menu_id: string }
         Returns: undefined
       }
+      require_admin: { Args: never; Returns: string }
       resolve_report: {
         Args: { p_action: string; p_report_id: string }
         Returns: undefined
