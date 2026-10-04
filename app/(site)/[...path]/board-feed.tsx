@@ -47,7 +47,7 @@ export function BoardFeed({
         <h1 className="min-w-0 text-2xl font-bold break-keep sm:text-3xl">{menu.title}</h1>
         {viewer.canWrite && (
           <Button asChild size="lg" className="shrink-0">
-            <Link href={`${basePath}/submit`}>
+            <Link href={`${basePath}/submit`} prefetch={false}>
               <PenSquare aria-hidden />
               글쓰기
             </Link>

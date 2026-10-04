@@ -20,27 +20,30 @@ export type Database = {
           file_name: string
           id: string
           mime_type: string
-          post_id: string
+          post_id: string | null
           size_bytes: number
           storage_path: string
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string
           file_name: string
           id?: string
           mime_type: string
-          post_id: string
+          post_id?: string | null
           size_bytes: number
           storage_path: string
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string
           file_name?: string
           id?: string
           mime_type?: string
-          post_id?: string
+          post_id?: string | null
           size_bytes?: number
           storage_path?: string
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -48,6 +51,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -556,10 +566,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      board_content_problem: {
+        Args: { p_blocks: Json; p_depth?: number; p_uid: string }
+        Returns: string
+      }
+      board_inline_problem: {
+        Args: { p_allow_links: boolean; p_content: Json }
+        Returns: string
+      }
       board_target_post_id: {
         Args: { p_target_id: string; p_target_type: string }
         Returns: string
       }
+      board_upload_daily_limit: { Args: never; Returns: number }
       can_comment: { Args: { p_post_id: string }; Returns: boolean }
       can_report: {
         Args: { p_target_id: string; p_target_type: string }
@@ -580,6 +599,17 @@ export type Database = {
       consume_otp_attempt: {
         Args: { p_delta?: number; p_email_hash: string }
         Returns: number
+      }
+      create_board_post: {
+        Args: {
+          p_content: Json
+          p_content_text: string
+          p_menu_id: string
+          p_slug: string
+          p_title: string
+          p_upload_paths: string[]
+        }
+        Returns: string
       }
       current_user_role: { Args: never; Returns: string }
       get_post_editor_content: {
@@ -642,6 +672,16 @@ export type Database = {
           title: string
           title_match: boolean
         }[]
+      }
+      update_board_post: {
+        Args: {
+          p_content: Json
+          p_content_text: string
+          p_post_id: string
+          p_title: string
+          p_upload_paths: string[]
+        }
+        Returns: undefined
       }
     }
     Enums: {

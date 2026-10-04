@@ -2,10 +2,12 @@ import "server-only";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { postPath, type MenuNode } from "@/lib/menus/tree";
+import { getSupabasePublicConfig } from "@/lib/env";
 import { absoluteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+import { uploadUrlPrefix } from "./content";
 import { decodeFeedCursor, encodeFeedCursor, feedCursorFilter, type FeedCursor } from "./cursor";
 import {
   FEED_PAGE_SIZE,
@@ -153,6 +155,9 @@ async function toCards(
   const ids = rows.map((r) => r.id);
   const authorIds = [...new Set(rows.flatMap((r) => (r.author_id ? [r.author_id] : [])))];
   const [authors, votes] = await Promise.all([nicknames(authorIds), myVotes(ids)]);
+  // 게시판 이미지는 사이트 Storage에 올린 것만 보여 준다(DB는 호스트까지 검사할 수 없다).
+  const config = getSupabasePublicConfig();
+  const imagePrefix = config ? uploadUrlPrefix(config.url) : null;
   return rows.map((row) => {
     const href = postPath(menu, parent, row.slug);
     return {
@@ -163,7 +168,7 @@ async function toCards(
       createdAt: row.created_at,
       author: (row.author_id && authors.get(row.author_id)) || "알 수 없음",
       preview: previewText(row.content_text),
-      imageUrl: firstImageUrl(row.content),
+      imageUrl: imagePrefix ? firstImageUrl(row.content, imagePrefix) : null,
       score: row.score,
       commentCount: row.comment_count,
       isPinned: row.is_pinned,

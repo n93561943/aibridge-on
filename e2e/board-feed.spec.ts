@@ -13,7 +13,9 @@ import { createMenuViaAdmin, deleteMenuViaAdmin } from "./helpers/menus";
 const t = (s: string) => [{ type: "text", text: s, styles: {} }];
 const HOUR = 60 * 60 * 1000;
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-const IMAGE_URL = "https://example.com/e2e-board-thumb.png";
+// 게시판 썸네일은 사이트 Storage 주소만 보인다.
+const IMAGE_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/post-files/board/e2e/thumb.png`;
+const EXTERNAL_IMAGE_URL = "https://example.com/e2e-board-thumb.png";
 
 /** 게시판 피드(F-08): 고정글 + 인기 글(2.9천) + 최신 글 + 채우기 22개 = 일반 글 24개 */
 test.describe("게시판 피드(F-08)", () => {
@@ -86,7 +88,7 @@ test.describe("게시판 피드(F-08)", () => {
         title: "최신 글",
         slug: "latest",
         score: 1,
-        content: [],
+        content: [{ id: "x", type: "image", props: { url: EXTERNAL_IMAGE_URL }, children: [] }],
         content_text: "",
         created_at: ago(60 * 1000),
       },
@@ -131,6 +133,7 @@ test.describe("게시판 피드(F-08)", () => {
     await expect(popular.locator("time")).toHaveText("2일 전");
     await expect(popular).toContainText("미리보기 문장입니다");
     await expect(popular.locator("img")).toHaveAttribute("src", IMAGE_URL);
+    await expect(list.getByRole("article", { name: "최신 글" }).locator("img")).toHaveCount(0);
     await expect(popular.getByTestId("score")).toHaveText("점수 2.9천");
     await expect(popular.getByRole("link", { name: "댓글 0개" })).toBeVisible();
     await expect(list.getByRole("article", { name: "최신 글" }).locator("time")).toHaveText(

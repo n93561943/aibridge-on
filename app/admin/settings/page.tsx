@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 
 import { requireAdmin } from "@/lib/auth/current-user";
-import { getHomeHeroText, getOnlineJudgeTemplate } from "@/lib/settings/queries";
+import {
+  getBoardUploadDailyLimit,
+  getHomeHeroText,
+  getOnlineJudgeTemplate,
+} from "@/lib/settings/queries";
 import { siteConfig } from "@/lib/site";
 
 import { SettingsForm } from "./settings-form";
@@ -11,9 +15,10 @@ export const metadata: Metadata = { title: "설정" };
 /** 사이트 설정(최소판). AI 설정·예산은 P7에서 추가한다. */
 export default async function SettingsPage() {
   await requireAdmin("/admin/settings");
-  const [homeHeroText, onlineJudgeUrl] = await Promise.all([
+  const [homeHeroText, onlineJudgeUrl, boardUploadLimit] = await Promise.all([
     getHomeHeroText(),
     getOnlineJudgeTemplate(),
+    getBoardUploadDailyLimit(),
   ]);
   return (
     <div className="container-site flex max-w-2xl flex-col gap-6 py-8">
@@ -24,6 +29,8 @@ export default async function SettingsPage() {
       <SettingsForm
         homeHeroText={homeHeroText ?? ""}
         onlineJudgeUrl={onlineJudgeUrl ?? ""}
+        // 설정이 없으면 DB 함수(board_upload_daily_limit)도 마이그레이션 기본값 30을 쓴다.
+        boardUploadLimit={boardUploadLimit ?? 30}
         defaultTagline={siteConfig.tagline}
       />
     </div>

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/types/database";
 
-import { purgeExpiredTrash, trashCutoff } from "./purge";
+import { purgeExpiredTrash, purgeUnlinkedUploads, trashCutoff } from "./purge";
 
 type Post = { id: string; deleted_at: string | null };
 type Attachment = { post_id: string; storage_path: string };
@@ -115,5 +115,82 @@ describe("purgeExpiredTrash", () => {
     });
     await expect(purgeExpiredTrash(db, NOW)).rejects.toThrow("파일 삭제 실패");
     expect(posts).toHaveLength(1);
+  });
+});
+
+describe("purgeUnlinkedUploads", () => {
+  type Upload = { id: string; post_id: string | null; storage_path: string; created_at: string };
+
+  /** purgeUnlinkedUploads가 쓰는 쿼리만 흉내 내는 메모리 DB */
+  function uploadsDb(rows: Upload[], opts: { removeFails?: boolean } = {}) {
+    const removed: string[] = [];
+    const db = {
+      from() {
+        const filters: ((r: Upload) => boolean)[] = [];
+        let limit = Infinity;
+        const builder = {
+          select: () => builder,
+          is(col: keyof Upload, value: null) {
+            filters.push((r) => r[col] === value);
+            return builder;
+          },
+          lt(col: keyof Upload, value: string) {
+            filters.push((r) => String(r[col]) < value);
+            return builder;
+          },
+          limit(n: number) {
+            limit = n;
+            return builder;
+          },
+          delete: () => ({
+            in(_col: string, ids: string[]) {
+              for (let i = rows.length - 1; i >= 0; i--)
+                if (ids.includes(rows[i].id)) rows.splice(i, 1);
+              return Promise.resolve({ error: null });
+            },
+          }),
+          then(resolve: (v: { data: Upload[]; error: null }) => void) {
+            resolve({
+              data: rows.filter((r) => filters.every((f) => f(r))).slice(0, limit),
+              error: null,
+            });
+          },
+        };
+        return builder;
+      },
+      storage: {
+        from: () => ({
+          remove(paths: string[]) {
+            if (opts.removeFails) return Promise.resolve({ error: { message: "storage down" } });
+            removed.push(...paths);
+            return Promise.resolve({ error: null });
+          },
+        }),
+      },
+    };
+    return { db: db as unknown as SupabaseClient<Database>, removed };
+  }
+
+  const hours = (n: number) => new Date(NOW.getTime() - n * 3_600_000).toISOString();
+
+  it("24시간이 지난 미연결 업로드만 파일과 함께 지운다", async () => {
+    const rows: Upload[] = [
+      { id: "old", post_id: null, storage_path: "board/u/old.png", created_at: hours(25) },
+      { id: "fresh", post_id: null, storage_path: "board/u/fresh.png", created_at: hours(2) },
+      { id: "linked", post_id: "p1", storage_path: "board/u/linked.png", created_at: hours(48) },
+    ];
+    const { db, removed } = uploadsDb(rows);
+    expect(await purgeUnlinkedUploads(db, NOW)).toBe(1);
+    expect(removed).toEqual(["board/u/old.png"]);
+    expect(rows.map((r) => r.id)).toEqual(["fresh", "linked"]);
+  });
+
+  it("파일 삭제가 실패하면 기록을 남기고 오류를 낸다", async () => {
+    const rows: Upload[] = [
+      { id: "old", post_id: null, storage_path: "board/u/old.png", created_at: hours(30) },
+    ];
+    const { db } = uploadsDb(rows, { removeFails: true });
+    await expect(purgeUnlinkedUploads(db, NOW)).rejects.toThrow("파일 삭제 실패");
+    expect(rows).toHaveLength(1);
   });
 });

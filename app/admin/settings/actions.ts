@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/current-user";
 import { POSTS_CACHE_TAG } from "@/lib/posts/public";
 import { ONLINE_JUDGE_SETTING_KEY } from "@/lib/settings/online-judge";
-import { HOME_HERO_SETTING_KEY } from "@/lib/settings/queries";
+import { BOARD_UPLOAD_LIMIT_SETTING_KEY, HOME_HERO_SETTING_KEY } from "@/lib/settings/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { ok?: boolean; message?: string; errors?: Record<string, string> };
@@ -21,6 +21,11 @@ const settingsSchema = z.object({
       message:
         "http(s)로 시작하고 문제 번호 자리 {id}가 들어간 주소를 입력해 주세요. 예: https://judge.example.com/problem/{id}",
     }),
+  boardUploadLimit: z.coerce
+    .number({ error: "0~1000 사이 정수를 입력해 주세요." })
+    .int("0~1000 사이 정수를 입력해 주세요.")
+    .min(0, "0~1000 사이 정수를 입력해 주세요.")
+    .max(1000, "0~1000 사이 정수를 입력해 주세요."),
 });
 
 /** 사이트 설정 저장(/admin/settings). 비운 값은 설정을 지워 기본 동작(부제·"준비 중")으로 돌린다. */
@@ -32,6 +37,7 @@ export async function saveSettings(
   const parsed = settingsSchema.safeParse({
     homeHeroText: formData.get("homeHeroText") ?? "",
     onlineJudgeUrl: formData.get("onlineJudgeUrl") ?? "",
+    boardUploadLimit: formData.get("boardUploadLimit") || undefined,
   });
   if (!parsed.success) {
     const errors: Record<string, string> = {};
@@ -49,6 +55,10 @@ export async function saveSettings(
       : await supabase.from("site_settings").delete().eq("key", key);
     if (error) return { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
   }
+  const { error: limitError } = await supabase
+    .from("site_settings")
+    .upsert({ key: BOARD_UPLOAD_LIMIT_SETTING_KEY, value: parsed.data.boardUploadLimit });
+  if (limitError) return { message: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
 
   revalidateTag(POSTS_CACHE_TAG);
   revalidatePath("/", "layout");

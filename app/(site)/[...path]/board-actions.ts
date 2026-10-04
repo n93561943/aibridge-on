@@ -5,8 +5,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { type BoardFeedPage, getBoardFeedPage } from "@/lib/board/feed";
 import { parseFeedOrder } from "@/lib/board/format";
-import { getPublicMenuTree } from "@/lib/menus/queries";
-import type { MenuNode } from "@/lib/menus/tree";
+import { findActiveBoard } from "@/lib/board/write";
 import { createClient } from "@/lib/supabase/server";
 
 const loadMoreSchema = z.object({
@@ -15,20 +14,6 @@ const loadMoreSchema = z.object({
   period: z.string().max(10),
   cursor: z.string().min(1).max(500),
 });
-
-/** 활성 게시판 메뉴와 그 상위 메뉴. 공개 메뉴 트리에 없으면 null. */
-async function findActiveBoard(
-  menuId: string,
-): Promise<{ menu: MenuNode; parent: MenuNode | null } | null> {
-  for (const root of await getPublicMenuTree()) {
-    if (!root.is_active) continue;
-    if (root.id === menuId) return root.type === "board" ? { menu: root, parent: null } : null;
-    const child = root.children.find((c) => c.id === menuId);
-    if (child)
-      return child.type === "board" && child.is_active ? { menu: child, parent: root } : null;
-  }
-  return null;
-}
 
 /** 무한 스크롤: 다음 20개. 비회원도 부를 수 있다(공개 글만 돌려준다). */
 export async function loadMoreBoardPosts(input: {

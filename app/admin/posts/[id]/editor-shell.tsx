@@ -23,7 +23,7 @@ import {
 } from "../actions";
 import { PostMetaForm } from "./post-meta-form";
 import { RevisionsSheet } from "./revisions-sheet";
-import { useUnsavedChangesWarning } from "./use-unsaved-changes-warning";
+import { useUnsavedChangesWarning } from "@/components/editor/use-unsaved-changes-warning";
 
 const PostEditor = dynamic(() => import("@/components/editor/post-editor"), {
   ssr: false,

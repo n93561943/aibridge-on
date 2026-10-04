@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getServerEnv } from "@/lib/env.server";
-import { purgeExpiredTrash } from "@/lib/posts/purge";
+import { purgeExpiredTrash, purgeUnlinkedUploads } from "@/lib/posts/purge";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,8 @@ function isAuthorized(header: string | null, secret: string): boolean {
 }
 
 /**
- * 휴지통 30일 경과 게시물 영구 삭제. Vercel Cron이 하루 한 번 호출한다(vercel.json).
+ * 휴지통 30일 경과 게시물 영구 삭제와 글에 연결되지 않은 게시판 업로드(24시간 경과) 정리.
+ * Vercel Cron이 하루 한 번 호출한다(vercel.json).
  * Vercel은 CRON_SECRET이 설정되어 있으면 Authorization: Bearer <값>을 붙여 보낸다.
  */
 export async function GET(request: Request) {
@@ -31,8 +32,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await purgeExpiredTrash(createAdminClient());
-    return NextResponse.json({ ok: true, ...result });
+    const db = createAdminClient();
+    const result = await purgeExpiredTrash(db);
+    const unlinkedUploads = await purgeUnlinkedUploads(db);
+    return NextResponse.json({ ok: true, ...result, unlinkedUploads });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ ok: false, error: "휴지통 정리에 실패했습니다." }, { status: 500 });

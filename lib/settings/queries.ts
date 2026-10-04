@@ -27,3 +27,16 @@ export async function getHomeHeroText(): Promise<string | null> {
     .maybeSingle();
   return typeof data?.value === "string" && data.value.trim() ? data.value : null;
 }
+
+export const BOARD_UPLOAD_LIMIT_SETTING_KEY = "board_upload_daily_limit";
+
+/** 회원 하루(최근 24시간) 이미지 업로드 한도. 관리자만 읽을 수 있다(설정 화면용). 없으면 null. */
+export async function getBoardUploadDailyLimit(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", BOARD_UPLOAD_LIMIT_SETTING_KEY)
+    .maybeSingle();
+  return typeof data?.value === "number" ? data.value : null;
+}

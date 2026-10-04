@@ -89,15 +89,18 @@ export function previewText(contentText: string): string {
   return flat.length > PREVIEW_CHARS ? `${flat.slice(0, PREVIEW_CHARS)}…` : flat;
 }
 
-/** 첫 이미지 블록 주소(교사 전용 박스 안은 제외, http(s)만). 없으면 null. */
-export function firstImageUrl(content: unknown): string | null {
+/**
+ * 첫 이미지 블록 주소(교사 전용 박스 안은 제외, http(s)만). 없으면 null.
+ * allowedPrefix를 주면 그 주소로 시작하는 이미지만 쓴다(게시판: 사이트 Storage 업로드만).
+ */
+export function firstImageUrl(content: unknown, allowedPrefix?: string): string | null {
   if (!Array.isArray(content)) return null;
+  const ok = (url: string) =>
+    /^https?:\/\//i.test(url) && (!allowedPrefix || url.startsWith(allowedPrefix));
   const walk = (blocks: Block[]): string | null => {
     for (const block of blocks) {
       const url = block.props?.url;
-      if (block.type === "image" && typeof url === "string" && /^https?:\/\//i.test(url)) {
-        return url;
-      }
+      if (block.type === "image" && typeof url === "string" && ok(url)) return url;
       const found = Array.isArray(block.children) ? walk(block.children) : null;
       if (found) return found;
     }

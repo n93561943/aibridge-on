@@ -111,4 +111,14 @@ describe("카드 미리보기", () => {
     ).toBeNull();
     expect(firstImageUrl(null)).toBeNull();
   });
+
+  it("허용 주소를 주면 그 주소로 시작하는 이미지만 쓴다", () => {
+    const prefix = "https://abc.supabase.co/storage/v1/object/public/post-files/";
+    const content = [
+      block("image", { url: "https://evil.test/storage/v1/object/public/post-files/board/a.png" }),
+      block("image", { url: `${prefix}board/u/b.png` }),
+    ];
+    expect(firstImageUrl(content, prefix)).toBe(`${prefix}board/u/b.png`);
+    expect(firstImageUrl(content.slice(0, 1), prefix)).toBeNull();
+  });
 });

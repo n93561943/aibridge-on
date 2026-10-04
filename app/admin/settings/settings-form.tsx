@@ -11,10 +11,12 @@ import { saveSettings, type SettingsState } from "./actions";
 export function SettingsForm({
   homeHeroText,
   onlineJudgeUrl,
+  boardUploadLimit,
   defaultTagline,
 }: {
   homeHeroText: string;
   onlineJudgeUrl: string;
+  boardUploadLimit: number;
   defaultTagline: string;
 }) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(saveSettings, {});
@@ -64,6 +66,32 @@ export function SettingsForm({
         </p>
         <p id="onlineJudgeUrl-error" className="text-sm text-destructive empty:hidden">
           {errors.onlineJudgeUrl}
+        </p>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2 rounded-xl border bg-background p-4">
+        <legend className="px-1 font-semibold">게시판</legend>
+        <Label htmlFor="boardUploadLimit">회원 이미지 업로드 한도(하루)</Label>
+        <Input
+          id="boardUploadLimit"
+          name="boardUploadLimit"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={1000}
+          step={1}
+          required
+          defaultValue={boardUploadLimit}
+          aria-invalid={!!errors.boardUploadLimit || undefined}
+          aria-describedby="boardUploadLimit-hint boardUploadLimit-error"
+          className="w-32"
+        />
+        <p id="boardUploadLimit-hint" className="text-xs text-muted-foreground">
+          회원 한 명이 최근 24시간 동안 게시판 글에 올릴 수 있는 이미지 수입니다. 0이면 회원
+          업로드를 막습니다. 관리자는 제한이 없습니다.
+        </p>
+        <p id="boardUploadLimit-error" className="text-sm text-destructive empty:hidden">
+          {errors.boardUploadLimit}
         </p>
       </fieldset>
 
