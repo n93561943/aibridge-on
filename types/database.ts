@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       attachments: {
@@ -70,6 +45,70 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "attachments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          deleted_at: string | null
+          depth: number
+          hidden_at: string | null
+          id: string
+          parent_id: string | null
+          post_id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          depth?: number
+          hidden_at?: string | null
+          id?: string
+          parent_id?: string | null
+          post_id: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          depth?: number
+          hidden_at?: string | null
+          id?: string
+          parent_id?: string | null
+          post_id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
@@ -251,6 +290,7 @@ export type Database = {
           draft_saved_at: string | null
           draft_title: string | null
           hidden_at: string | null
+          hot_rank: number | null
           id: string
           is_pinned: boolean
           lesson_no: number | null
@@ -277,6 +317,7 @@ export type Database = {
           draft_saved_at?: string | null
           draft_title?: string | null
           hidden_at?: string | null
+          hot_rank?: number | null
           id?: string
           is_pinned?: boolean
           lesson_no?: number | null
@@ -303,6 +344,7 @@ export type Database = {
           draft_saved_at?: string | null
           draft_title?: string | null
           hidden_at?: string | null
+          hot_rank?: number | null
           id?: string
           is_pinned?: boolean
           lesson_no?: number | null
@@ -402,6 +444,63 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          reason: string
+          reporter_id: string | null
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_settings: {
         Row: {
           key: string
@@ -420,11 +519,64 @@ export type Database = {
         }
         Relationships: []
       }
+      votes: {
+        Row: {
+          created_at: string
+          target_id: string
+          target_type: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          target_id: string
+          target_type: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          target_id?: string
+          target_type?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      board_target_post_id: {
+        Args: { p_target_id: string; p_target_type: string }
+        Returns: string
+      }
+      can_comment: { Args: { p_post_id: string }; Returns: boolean }
+      can_report: {
+        Args: { p_target_id: string; p_target_type: string }
+        Returns: boolean
+      }
+      can_vote: {
+        Args: { p_target_id: string; p_target_type: string }
+        Returns: boolean
+      }
+      can_write_board: { Args: { p_menu_id: string }; Returns: boolean }
+      cast_vote: {
+        Args: { p_target_id: string; p_target_type: string; p_value: number }
+        Returns: {
+          my_vote: number
+          score: number
+        }[]
+      }
       consume_otp_attempt: {
         Args: { p_delta?: number; p_email_hash: string }
         Returns: number
@@ -441,6 +593,7 @@ export type Database = {
       give_guardian_consent: { Args: { p_token_hash: string }; Returns: string }
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      is_member_request: { Args: never; Returns: boolean }
       issue_guardian_token: {
         Args: {
           p_cooldown_seconds: number
@@ -451,6 +604,17 @@ export type Database = {
         }
         Returns: string
       }
+      open_board_post_menu: {
+        Args: { p_post_id: string }
+        Returns: {
+          allow_comments: boolean
+          allow_votes: boolean
+        }[]
+      }
+      post_hot_rank: {
+        Args: { p_created_at: string; p_score: number }
+        Returns: number
+      }
       purge_expired_accounts: { Args: never; Returns: undefined }
       reorder_menus: {
         Args: { p_ids: string[]; p_parent_id?: string }
@@ -460,6 +624,11 @@ export type Database = {
         Args: { p_ids: string[]; p_menu_id: string }
         Returns: undefined
       }
+      resolve_report: {
+        Args: { p_action: string; p_report_id: string }
+        Returns: undefined
+      }
+      role_rank: { Args: { p_role: string }; Returns: number }
       search_posts: {
         Args: { p_limit?: number; p_menu_id?: string; p_query: string }
         Returns: {
@@ -602,9 +771,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

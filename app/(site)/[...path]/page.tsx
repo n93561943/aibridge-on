@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-import { menuTypeLabels } from "@/lib/menus/schema";
+import { getBoardFeedPage, getBoardViewer } from "@/lib/board/feed";
+import { parseFeedOrder } from "@/lib/board/format";
 import { getPublicMenuTree } from "@/lib/menus/queries";
-import { menuHref, type MenuNode, resolveMenuPath } from "@/lib/menus/tree";
+import { menuHref, resolveMenuPath } from "@/lib/menus/tree";
 import {
   getPreviewPost,
   getPublishedPost,
@@ -13,13 +14,13 @@ import {
 } from "@/lib/posts/public";
 import { getOnlineJudgeTemplate } from "@/lib/settings/queries";
 
-import { Breadcrumb } from "./breadcrumb";
+import { BoardFeed } from "./board-feed";
 import { PostView } from "./post-view";
 import { SeriesList } from "./series-list";
 
 type Props = {
   params: Promise<{ path: string[] }>;
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; sort?: string; t?: string }>;
 };
 
 async function resolve(path: string[]) {
@@ -45,10 +46,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * 메뉴·글 공개 주소(F-07). /메뉴, /메뉴/글, /그룹/하위메뉴, /그룹/하위메뉴/글.
- * group은 첫 하위 메뉴로, link는 외부 주소로 보낸다. 게시판(board)은 P5 전까지 준비 중 화면.
+ * group은 첫 하위 메뉴로, link는 외부 주소로 보낸다. 게시판(board) 목록은 피드(F-08).
  */
 export default async function MenuOrPostPage({ params, searchParams }: Props) {
-  const [{ path }, { preview }] = await Promise.all([params, searchParams]);
+  const [{ path }, { preview, sort, t }] = await Promise.all([params, searchParams]);
   const resolved = await resolve(path);
   if (!resolved) notFound();
   const { menu, parent, postSlug } = resolved;
@@ -62,7 +63,22 @@ export default async function MenuOrPostPage({ params, searchParams }: Props) {
 
   if (menu.type === "board") {
     if (postSlug) notFound();
-    return <BoardPlaceholder menu={menu} parent={parent} />;
+    const order = parseFeedOrder(sort, t);
+    const now = new Date();
+    const [page, viewer] = await Promise.all([
+      getBoardFeedPage(menu, parent, order, null, now),
+      getBoardViewer(menu.id),
+    ]);
+    return (
+      <BoardFeed
+        menu={menu}
+        parent={parent}
+        order={order}
+        page={page}
+        viewer={viewer}
+        now={now.getTime()}
+      />
+    );
   }
 
   if (!postSlug)
@@ -97,20 +113,5 @@ export default async function MenuOrPostPage({ params, searchParams }: Props) {
       preview={previewInfo}
       editHref={viewer.isAdmin ? `/admin/posts/${post.id}` : null}
     />
-  );
-}
-
-function BoardPlaceholder({ menu, parent }: { menu: MenuNode; parent: MenuNode | null }) {
-  return (
-    <div className="container-site flex flex-col gap-6 py-10 sm:py-16">
-      <Breadcrumb items={[...(parent ? [{ label: parent.title }] : []), { label: menu.title }]} />
-      <header className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-muted-foreground">{menuTypeLabels.board}</p>
-        <h1 className="text-2xl font-bold break-keep sm:text-3xl">{menu.title}</h1>
-      </header>
-      <p className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
-        게시판은 준비 중입니다. 곧 열게요.
-      </p>
-    </div>
   );
 }
